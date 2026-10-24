@@ -7,8 +7,19 @@ import { MenuUtilisateur } from "@/components/layout/MenuUtilisateur"
 import { BoutonTheme } from "@/components/ThemeProvider"
 import { Button } from "@/components/ui/button"
 import { changerStatut, useCommandes } from "@/lib/hooks/useCommandes"
-import { ajouterJours, aujourdhui, cn, formatDate, formatQuantite, formatUnite, libelleJour } from "@/lib/utils"
+import {
+  ajouterJours,
+  aujourdhui,
+  cn,
+  formatDate,
+  formatJourMoisCourt,
+  formatJourSemaine,
+  formatQuantite,
+  formatUnite,
+  libelleJour,
+} from "@/lib/utils"
 import { TYPES_LIVRAISON, type CommandeDetail, type PointDeVente, type Role, type StatutCommande } from "@/types"
+import { BandeauJours, NB_JOURS_BANDEAU } from "@/components/calendrier/BandeauJours"
 import { CarteFornil } from "./CarteFornil"
 
 interface Props {
@@ -29,23 +40,29 @@ const CLE_SON = "bg:fornil:son"
 
 export function VueFornil({ pointsDeVente, utilisateur }: Props) {
   const [jour] = useState(aujourdhui)
-  const jours = useMemo(() => [0, 1, 2, 3].map((n) => ajouterJours(jour, n)), [jour])
-  const [jourActif, setJourActif] = useState(jours[0])
+  const [jourActif, setJourActif] = useState(jour)
+  // La semaine à venir est toujours chargée ; un jour choisi au calendrier élargit la plage.
+  const finSemaineAVenir = ajouterJours(jour, NB_JOURS_BANDEAU - 1)
+  const dateDebut = jourActif < jour ? jourActif : jour
+  const dateFin = jourActif > finSemaineAVenir ? jourActif : finSemaineAVenir
   const [enCours, setEnCours] = useState<Set<string>>(new Set())
   const [nouvelles, setNouvelles] = useState<Map<string, number>>(new Map())
   const son = useSon()
 
   const { commandes, chargement, erreur, realtime, majLocale } = useCommandes({
-    dateDebut: jours[0],
-    dateFin: jours[3],
+    dateDebut,
+    dateFin,
     statuts: ["en_attente", "preparee", "livree"],
   })
 
   // Repère les commandes arrivées depuis le premier chargement (animation + son).
   const connues = useRef<Set<string> | null>(null)
+  const plageConnue = useRef("")
   useEffect(() => {
     if (chargement) return
-    if (connues.current === null) {
+    // Changement de plage (calendrier) : ce ne sont pas des nouvelles commandes.
+    if (connues.current === null || plageConnue.current !== `${dateDebut}|${dateFin}`) {
+      plageConnue.current = `${dateDebut}|${dateFin}`
       connues.current = new Set(commandes.map((c) => c.id))
       return
     }
@@ -66,7 +83,7 @@ export function VueFornil({ pointsDeVente, utilisateur }: Props) {
         ? `${arrivees.length} nouvelles commandes`
         : `Nouvelle commande : ${premiere.client?.nom ?? ""} (${libelleJour(premiere.date_livraison, jour)})`,
     )
-  }, [commandes, chargement, son, jour])
+  }, [commandes, chargement, son, jour, dateDebut, dateFin])
 
   useEffect(() => {
     if (nouvelles.size === 0) return
@@ -119,7 +136,8 @@ export function VueFornil({ pointsDeVente, utilisateur }: Props) {
                 title={realtime === "connecte" ? "Temps réel actif" : "Temps réel déconnecté"}
               />
               <strong className="text-foreground tabular-nums">{enAttente}</strong>
-              commande{enAttente > 1 ? "s" : ""} en attente · {libelleJour(jourActif, jour)}
+              commande{enAttente > 1 ? "s" : ""} en attente · {formatJourSemaine(jourActif)}{" "}
+              {formatJourMoisCourt(jourActif)}
             </p>
           </div>
           <div className="flex items-center gap-2 print:hidden">
@@ -142,30 +160,9 @@ export function VueFornil({ pointsDeVente, utilisateur }: Props) {
           </div>
         </div>
 
-        <nav className="grid grid-cols-4 gap-2 px-4 pb-3 lg:px-6 print:hidden" role="tablist">
-          {jours.map((j, i) => {
-            const n = enAttenteParJour(j)
-            return (
-              <button
-                key={j}
-                role="tab"
-                aria-selected={jourActif === j}
-                onClick={() => setJourActif(j)}
-                className={cn(
-                  "flex min-h-14 flex-col items-center justify-center rounded-xl border-2 px-2 text-lg font-semibold transition-colors",
-                  jourActif === j
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-transparent bg-muted text-foreground hover:bg-muted/70",
-                )}
-              >
-                <span>{i === 0 ? "Aujourd'hui" : i === 1 ? "Demain" : `J+${i}`}</span>
-                <span className={cn("text-sm font-normal", jourActif === j ? "opacity-80" : "text-muted-foreground")}>
-                  {n > 0 ? `${n} en attente` : libelleJour(j, jour)}
-                </span>
-              </button>
-            )
-          })}
-        </nav>
+        <div className="px-4 pb-3 lg:px-6 print:hidden">
+          <BandeauJours grand jour={jourActif} surChoix={setJourActif} enAttente={enAttenteParJour} />
+        </div>
       </header>
 
       <main className="flex-1 space-y-8 px-4 py-6 lg:px-6">

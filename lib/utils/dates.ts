@@ -111,3 +111,31 @@ export function libelleJour(iso: string, reference = aujourdhui()): string {
   if (iso === ajouterJours(reference, -1)) return "Hier"
   return formatDateCourte(iso)
 }
+
+const formateurJourSemaine = new Intl.DateTimeFormat("fr-FR", { weekday: "long", timeZone: "UTC" })
+const formateurJourMoisCourt = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", timeZone: "UTC" })
+const formateurMoisAnnee = new Intl.DateTimeFormat("fr-FR", { month: "long", year: "numeric", timeZone: "UTC" })
+
+/** "Lundi" */
+export function formatJourSemaine(iso: string): string {
+  const j = formateurJourSemaine.format(versDate(iso))
+  return j.charAt(0).toUpperCase() + j.slice(1)
+}
+
+/** "26 oct." */
+export function formatJourMoisCourt(iso: string): string {
+  return formateurJourMoisCourt.format(versDate(iso))
+}
+
+/** "Octobre 2026" */
+export function formatMoisAnnee(iso: string): string {
+  const m = formateurMoisAnnee.format(versDate(iso))
+  return m.charAt(0).toUpperCase() + m.slice(1)
+}
+
+/** Décale d'un nombre de mois (renvoie le 1er du mois obtenu). */
+export function ajouterMois(iso: string, mois: number): string {
+  const d = versDate(debutMois(iso))
+  d.setUTCMonth(d.getUTCMonth() + mois)
+  return versISO(d)
+}

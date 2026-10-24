@@ -8,11 +8,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { changerStatut, useCommandes } from "@/lib/hooks/useCommandes"
 import { useFileAttente } from "@/lib/hooks/useFileAttente"
 import { reessayerOperation, retirerOperation, synchroniser } from "@/lib/offline/fileAttente"
-import { ajouterJours, aujourdhui, cn, formatDateHeure, formatPrix, libelleJour } from "@/lib/utils"
+import { BandeauJours, NB_JOURS_BANDEAU } from "@/components/calendrier/BandeauJours"
+import {
+  ajouterJours,
+  aujourdhui,
+  formatDateHeure,
+  formatJourMoisCourt,
+  formatJourSemaine,
+  formatPrix,
+  libelleJour,
+} from "@/lib/utils"
 import type { CommandeDetail, PointDeVente, Role, StatutCommande } from "@/types"
 import { CarteCommande } from "./CarteCommande"
-
-type Onglet = "aujourdhui" | "demain" | "semaine"
 
 interface Props {
   role: Role
@@ -23,27 +30,21 @@ interface Props {
 
 /** Commandes du point de vente (vendeur), en temps réel. */
 export function ListeCommandes({ role, pointDeVenteId, pointsDeVente }: Props) {
-  const [onglet, setOnglet] = useState<Onglet>("aujourdhui")
+  const [jour] = useState(aujourdhui)
+  const [jourActif, setJourActif] = useState(jour)
   const [filtrePdv, setFiltrePdv] = useState<string>(pointDeVenteId ?? "tous")
-  const jour = aujourdhui()
   const pdv = pointDeVenteId ?? (filtrePdv === "tous" ? null : filtrePdv)
 
+  // Semaine à venir toujours chargée ; un jour choisi au calendrier élargit la plage.
+  const finSemaineAVenir = ajouterJours(jour, NB_JOURS_BANDEAU - 1)
   const { commandes, chargement, erreur, majLocale } = useCommandes({
-    dateDebut: jour,
-    dateFin: ajouterJours(jour, 7),
+    dateDebut: jourActif < jour ? jourActif : jour,
+    dateFin: jourActif > finSemaineAVenir ? jourActif : finSemaineAVenir,
     pointDeVenteId: pdv,
   })
 
-  const bornes: Record<Onglet, [string, string]> = {
-    aujourdhui: [jour, jour],
-    demain: [ajouterJours(jour, 1), ajouterJours(jour, 1)],
-    semaine: [jour, ajouterJours(jour, 7)],
-  }
-  const [debut, fin] = bornes[onglet]
-  const visibles = commandes.filter((c) => c.date_livraison >= debut && c.date_livraison <= fin)
-  const compte = (o: Onglet) =>
-    commandes.filter((c) => c.date_livraison >= bornes[o][0] && c.date_livraison <= bornes[o][1] && c.statut !== "annulee")
-      .length
+  const visibles = commandes.filter((c) => c.date_livraison === jourActif)
+  const enAttente = (j: string) => commandes.filter((c) => c.date_livraison === j && c.statut === "en_attente").length
 
   const totalJour = visibles.filter((c) => c.statut !== "annulee").reduce((s, c) => s + Number(c.total_ttc), 0)
 
@@ -81,28 +82,7 @@ export function ListeCommandes({ role, pointDeVenteId, pointsDeVente }: Props) {
         </Select>
       )}
 
-      <div className="grid grid-cols-3 gap-1 rounded-xl bg-muted p-1" role="tablist">
-        {(
-          [
-            ["aujourdhui", "Aujourd'hui"],
-            ["demain", "Demain"],
-            ["semaine", "7 jours"],
-          ] as const
-        ).map(([valeur, libelle]) => (
-          <button
-            key={valeur}
-            role="tab"
-            aria-selected={onglet === valeur}
-            onClick={() => setOnglet(valeur)}
-            className={cn(
-              "min-h-11 rounded-lg text-sm font-medium transition-colors",
-              onglet === valeur ? "bg-background shadow-sm" : "text-muted-foreground",
-            )}
-          >
-            {libelle} <span className="tabular-nums text-muted-foreground">({compte(valeur)})</span>
-          </button>
-        ))}
-      </div>
+      <BandeauJours jour={jourActif} surChoix={setJourActif} enAttente={enAttente} pointDeVenteId={pdv} />
 
       {erreur && <p className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{erreur}</p>}
 
@@ -111,7 +91,9 @@ export function ListeCommandes({ role, pointDeVenteId, pointsDeVente }: Props) {
           <Loader2Icon className="animate-spin" />
         </div>
       ) : visibles.length === 0 ? (
-        <p className="py-10 text-center text-muted-foreground">Aucune commande pour cette période.</p>
+        <p className="py-10 text-center text-muted-foreground">
+          Aucune commande pour {formatJourSemaine(jourActif).toLowerCase()} {formatJourMoisCourt(jourActif)}.
+        </p>
       ) : (
         <>
           <p className="text-sm text-muted-foreground">
@@ -122,7 +104,7 @@ export function ListeCommandes({ role, pointDeVenteId, pointsDeVente }: Props) {
               <CarteCommande
                 key={c.id}
                 commande={c}
-                afficherDate={onglet === "semaine"}
+                afficherDate={false}
                 afficherPointDeVente={!pointDeVenteId}
                 actions={
                   <>
