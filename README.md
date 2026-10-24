@@ -7,7 +7,7 @@ Application web qui remplace le papier et les messageries pour les commandes de 
 - **Fornil** (tablette) : commandes à produire en temps réel, par jour et par point de vente, mode nuit, impression.
 - **Patron** : toutes les commandes, catalogue et prix, clients, comptes, chiffre d'affaires en temps réel.
 
-**Production : https://boulangerie-guillaume.vercel.app**
+**Production : https://boulangerie-hoffmann.vercel.app** (l'ancienne adresse boulangerie-guillaume.vercel.app redirige ici)
 
 Stack : Next.js 16 (App Router) · TypeScript · Tailwind CSS 4 · shadcn/ui · Recharts · Supabase (Postgres, Auth, Realtime) · Vercel.
 
@@ -23,7 +23,7 @@ Ouvrir http://localhost:3000.
 
 ## Mise en place de Supabase
 
-Projet : `xhgzmidxfyzxvozjvhku` (https://supabase.com/dashboard/project/xhgzmidxfyzxvozjvhku)
+Projet `boulangerie-hoffmann` (réf. `xhgzmidxfyzxvozjvhku`) (https://supabase.com/dashboard/project/xhgzmidxfyzxvozjvhku)
 
 ### 1. Base de données
 
@@ -69,9 +69,9 @@ npm run creer-compte -- fornil@exemple.fr "mot-de-passe" "Fornil" boulanger
 
 ## Déploiement Vercel
 
-Projet Vercel `boulangerie-guillaume` (équipe flynoxcontact-8291's projects), relié au dépôt GitHub, région des fonctions `cdg1` (Paris).
+Projet Vercel `boulangerie-hoffmann` (équipe flynoxcontact-8291's projects), relié au dépôt GitHub, région des fonctions `cdg1` (Paris).
 
-1. Importer le dépôt GitHub `antoinesaas/boulangerie-guillaume` dans Vercel (framework détecté : Next.js) — déjà fait.
+1. Importer le dépôt GitHub `antoinesaas/boulangerie-hoffmann` dans Vercel (framework détecté : Next.js) — déjà fait.
 2. **Settings → Environment Variables** (Production + Preview) : `NEXT_PUBLIC_SUPABASE_URL` et
    `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (déjà en place), `SUPABASE_SECRET_KEY` (type *Sensitive*, à ajouter).
 3. Déployer. Chaque push sur `main` redéploie automatiquement.
