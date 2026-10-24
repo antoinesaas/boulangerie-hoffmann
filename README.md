@@ -33,6 +33,7 @@ Exécuter dans l'ordre, dans **SQL Editor** (ou `supabase db push` avec la CLI l
 2. `supabase/migrations/20261024000002_rls.sql` — Row Level Security
 3. `supabase/migrations/20261024000003_vues_ca_agregees.sql` — vues CA agrégées
 4. `supabase/migrations/20261024000004_index_clients.sql` — index de performance
+5. `supabase/migrations/20261024000005_appareils.sql` — appareils activés et codes d'activation
 5. `supabase/seed.sql` — points de vente, clients pros, produits par défaut (relançable sans doublons)
 
 Les versions appliquées sont enregistrées dans `supabase_migrations.schema_migrations` (compatible `supabase db push`).
@@ -78,6 +79,20 @@ Projet Vercel `boulangerie-hoffmann` (équipe flynoxcontact-8291's projects), re
 4. Dans Supabase → **Authentication → URL Configuration**, mettre l'URL Vercel dans *Site URL*.
 
 Node.js ≥ 20.9 (Vercel par défaut).
+
+## Utilisation au quotidien (sans mot de passe)
+
+- **Seul le patron a un compte** (email + mot de passe), via « Connexion patron ». À la toute première
+  ouverture, s'il n'existe aucun patron, la page de connexion propose de créer ce compte.
+- **Téléphones des boutiques et tablette du fornil** : on installe l'app (icône « Hoffmann » sur l'écran
+  d'accueil), puis on l'**active une seule fois** avec un code à 6 chiffres que le patron génère dans
+  **Appareils** (valable 15 min, usage unique). Ensuite l'appareil ouvre un écran de choix :
+  **Vendeur → Coffret / Merveille / Lermberg** ou **Fornil**. Plus jamais de mot de passe.
+- Un appareil perdu ou remplacé se **désactive** dans **Appareils** (effet immédiat).
+- Quelqu'un qui tombe sur l'adresse sans appareil activé ne voit que l'écran d'activation.
+
+Sur iPhone / iPad, installer d'abord l'app (Safari → Partager → Sur l'écran d'accueil), puis l'activer
+**depuis l'icône** : l'app installée a sa propre mémoire.
 
 ## Fonctionnement
 
