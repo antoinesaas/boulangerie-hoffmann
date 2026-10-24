@@ -7,6 +7,8 @@ Application web qui remplace le papier et les messageries pour les commandes de 
 - **Fornil** (tablette) : commandes à produire en temps réel, par jour et par point de vente, mode nuit, impression.
 - **Patron** : toutes les commandes, catalogue et prix, clients, comptes, chiffre d'affaires en temps réel.
 
+**Production : https://boulangerie-guillaume.vercel.app**
+
 Stack : Next.js 16 (App Router) · TypeScript · Tailwind CSS 4 · shadcn/ui · Recharts · Supabase (Postgres, Auth, Realtime) · Vercel.
 
 ## Démarrage local
@@ -30,7 +32,10 @@ Exécuter dans l'ordre, dans **SQL Editor** (ou `supabase db push` avec la CLI l
 1. `supabase/migrations/20261024000001_schema.sql` — tables, triggers, fonction `creer_commande`, vues, Realtime
 2. `supabase/migrations/20261024000002_rls.sql` — Row Level Security
 3. `supabase/migrations/20261024000003_vues_ca_agregees.sql` — vues CA agrégées
-4. `supabase/seed.sql` — points de vente, clients pros, produits par défaut (relançable sans doublons)
+4. `supabase/migrations/20261024000004_index_clients.sql` — index de performance
+5. `supabase/seed.sql` — points de vente, clients pros, produits par défaut (relançable sans doublons)
+
+Les versions appliquées sont enregistrées dans `supabase_migrations.schema_migrations` (compatible `supabase db push`).
 
 ### 2. Authentification
 
@@ -54,13 +59,21 @@ La clé secrète ne sert qu'à la gestion des comptes (création, mot de passe, 
 npm run creer-admin -- patron@exemple.fr "un-mot-de-passe-solide" "Guillaume"
 ```
 
-Ensuite, se connecter et créer les comptes vendeurs (rattachés à un point de vente) et boulangers dans **Utilisateurs**.
+Ensuite, se connecter et créer les comptes vendeurs (rattachés à un point de vente) et boulangers dans **Utilisateurs**,
+ou en ligne de commande :
+
+```bash
+npm run creer-compte -- vendeuse@exemple.fr "mot-de-passe" "Julie" vendeur Coffret
+npm run creer-compte -- fornil@exemple.fr "mot-de-passe" "Fornil" boulanger
+```
 
 ## Déploiement Vercel
 
-1. Importer le dépôt GitHub `antoinesaas/boulangerie-guillaume` dans Vercel (framework détecté : Next.js).
-2. **Settings → Environment Variables** (Production + Preview) : `NEXT_PUBLIC_SUPABASE_URL`,
-   `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`.
+Projet Vercel `boulangerie-guillaume` (équipe flynoxcontact-8291's projects), relié au dépôt GitHub, région des fonctions `cdg1` (Paris).
+
+1. Importer le dépôt GitHub `antoinesaas/boulangerie-guillaume` dans Vercel (framework détecté : Next.js) — déjà fait.
+2. **Settings → Environment Variables** (Production + Preview) : `NEXT_PUBLIC_SUPABASE_URL` et
+   `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (déjà en place), `SUPABASE_SECRET_KEY` (type *Sensitive*, à ajouter).
 3. Déployer. Chaque push sur `main` redéploie automatiquement.
 4. Dans Supabase → **Authentication → URL Configuration**, mettre l'URL Vercel dans *Site URL*.
 

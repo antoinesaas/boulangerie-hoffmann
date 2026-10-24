@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "creer-admin": "node --env-file=.env.local scripts/creer-admin.mjs",
-    "typecheck": "next typegen && tsc --noEmit"
+    "typecheck": "next typegen && tsc --noEmit",
+    "creer-compte": "node --env-file=.env.local scripts/creer-admin.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
