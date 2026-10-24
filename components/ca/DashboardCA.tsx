@@ -82,7 +82,10 @@ export function DashboardCA({ pointsDeVente, clientsPros }: Props) {
   const ventesAnalyse = analyse.ventes.filter((l) => statuts.includes(l.statut))
 
   const parPdv = useMemo(() => parPointDeVente(lignesAnalyse, pointsDeVente), [lignesAnalyse, pointsDeVente])
-  const livraisons = useMemo(() => parTypeLivraison(lignesAnalyse, clientsPros), [lignesAnalyse, clientsPros])
+  const livraisons = useMemo(
+    () => parTypeLivraison(lignesAnalyse, clientsPros, pointsDeVente.map((p) => p.nom)),
+    [lignesAnalyse, clientsPros, pointsDeVente],
+  )
   const top = useMemo(() => topProduits(ventesAnalyse), [ventesAnalyse])
   const libellePeriode = debut === fin ? formatDate(debut) : `du ${formatDateCourte(debut)} au ${formatDateCourte(fin)}`
 
@@ -155,7 +158,7 @@ export function DashboardCA({ pointsDeVente, clientsPros }: Props) {
       </Card>
 
       {/* Filtre unique pour les sections 3 à 5 */}
-      <div className="sticky top-0 z-20 -mx-4 flex flex-wrap items-center gap-2 border-y bg-background/95 px-4 py-3 backdrop-blur md:top-0 md:-mx-8 md:px-8">
+      <div className="z-20 -mx-4 flex flex-wrap items-center gap-2 border-y bg-background/95 px-4 py-3 backdrop-blur md:sticky md:top-0 md:-mx-8 md:px-8">
         <span className="mr-1 text-sm font-medium">Période d&apos;analyse</span>
         <div className="flex flex-wrap gap-1 rounded-lg bg-muted p-1" role="radiogroup" aria-label="Période">
           {(

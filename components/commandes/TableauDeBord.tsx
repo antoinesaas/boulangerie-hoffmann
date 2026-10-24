@@ -77,7 +77,7 @@ export function TableauDeBord({ pointsDeVente }: { pointsDeVente: Pick<PointDeVe
         <KpiCard libelle="Commandes pour demain" valeur={String(demain.length)} detail={formatPrix(somme(demain))} />
       </section>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 xl:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Aujourd&apos;hui par point de vente</CardTitle>

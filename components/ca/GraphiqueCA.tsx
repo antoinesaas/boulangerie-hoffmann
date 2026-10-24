@@ -133,9 +133,27 @@ export function GraphiqueCAPointsDeVente({ donnees }: { donnees: PointPdv[] }) {
         <Bar dataKey="ttc" fill="var(--viz-serie-1)" radius={[0, 4, 4, 0]} maxBarSize={24} isAnimationActive={false}>
           <LabelList
             dataKey="ttc"
-            position="right"
-            formatter={(v: unknown) => formatPrix(Number(v))}
-            style={{ fill: "var(--foreground)", fontSize: 13, fontWeight: 600 }}
+            content={(props) => {
+              const { x, y, width, height, value } = props as {
+                x: number
+                y: number
+                width: number
+                height: number
+                value: number
+              }
+              return (
+                <text
+                  x={x + (width || 0) + 8}
+                  y={y + height / 2}
+                  dominantBaseline="central"
+                  fontSize={13}
+                  fontWeight={600}
+                  fill={value ? "var(--foreground)" : "var(--muted-foreground)"}
+                >
+                  {formatPrix(Number(value))}
+                </text>
+              )
+            }}
           />
         </Bar>
       </BarChart>

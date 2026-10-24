@@ -65,7 +65,11 @@ const ORDRE_GROUPE: TypeClient[] = ["point_de_vente", "tournee", "marche", "prof
  * Points de vente, tournées et pros détaillés par client ; marché et particuliers regroupés.
  * Les clients pros actifs apparaissent même à 0 €.
  */
-export function parTypeLivraison(lignes: LigneCAJour[], clientsPros: Pick<Client, "id" | "nom" | "type">[]): LigneLivraison[] {
+export function parTypeLivraison(
+  lignes: LigneCAJour[],
+  clientsPros: Pick<Client, "id" | "nom" | "type">[],
+  ordrePointsDeVente: string[] = [],
+): LigneLivraison[] {
   const segments = new Map<string, LigneLivraison>()
   const cleDe = (type: TypeClient, clientId: string | null) =>
     type === "marche" || type === "regulier" || type === "occasionnel" ? type : `${type}:${clientId}`
@@ -107,11 +111,18 @@ export function parTypeLivraison(lignes: LigneCAJour[], clientsPros: Pick<Client
     seg.ttc += Number(l.total_ttc)
   }
 
+  // Points de vente dans l'ordre défini par le patron (Coffret, Merveille, Lermberg…), puis alphabétique.
+  const rangPdv = (s: LigneLivraison) => {
+    const i = ordrePointsDeVente.findIndex((nom) => s.libelle === `Point de vente — ${nom}`)
+    return i === -1 ? ordrePointsDeVente.length : i
+  }
   return [...segments.values()]
     .map((s) => ({ ...s, ht: arrondi(s.ht), ttc: arrondi(s.ttc) }))
     .sort(
       (a, b) =>
-        ORDRE_GROUPE.indexOf(a.groupe) - ORDRE_GROUPE.indexOf(b.groupe) || a.libelle.localeCompare(b.libelle, "fr"),
+        ORDRE_GROUPE.indexOf(a.groupe) - ORDRE_GROUPE.indexOf(b.groupe) ||
+        (a.groupe === "point_de_vente" ? rangPdv(a) - rangPdv(b) : 0) ||
+        a.libelle.localeCompare(b.libelle, "fr"),
     )
 }
 

@@ -66,10 +66,10 @@ export function SelecteurClient({ clients, selection, surSelection, surNouveauCl
         <div className="flex items-center gap-3">
           <div className="min-w-0 flex-1">
             <div className="truncate text-lg font-semibold">{selection.nom}</div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
               <Badge variant="secondary">{LIBELLES_TYPE_CLIENT[selection.type]}</Badge>
               {selection.telephone && (
-                <span className="inline-flex items-center gap-1">
+                <span className="inline-flex items-center gap-1 whitespace-nowrap">
                   <PhoneIcon className="size-3" /> {selection.telephone}
                 </span>
               )}
@@ -105,7 +105,8 @@ export function SelecteurClient({ clients, selection, surSelection, surNouveauCl
           <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
           <Input
             id="recherche-client"
-            type="search"
+            type="text"
+            enterKeyHint="search"
             value={recherche}
             onChange={(e) => setRecherche(e.target.value)}
             onFocus={() => setFocus(true)}
@@ -163,7 +164,6 @@ export function SelecteurClient({ clients, selection, surSelection, surNouveauCl
               onClick={() => setModal(true)}
               className="flex min-h-12 w-full items-center gap-2 px-3 py-2 text-left font-medium text-primary hover:bg-muted"
             >
-              <UserPlusIcon className="size-4" />
               {recherche ? `➕ Nouveau client « ${recherche.trim()} »` : "➕ Nouveau client"}
             </button>
           </li>

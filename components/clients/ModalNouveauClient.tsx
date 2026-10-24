@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label"
 import { ajouterOperation, estErreurTransitoire } from "@/lib/offline/fileAttente"
 import { createClient } from "@/lib/supabase/client"
 import { cn, normaliser, uuid } from "@/lib/utils"
-import { LIBELLES_TYPE_CLIENT, type Client, type TypeClientParticulier } from "@/types"
+import type { Client, TypeClientParticulier } from "@/types"
 
 interface Props {
   ouvert: boolean
@@ -170,7 +170,7 @@ function FormNouveauClient({
                 type === t ? "border-primary bg-primary text-primary-foreground" : "bg-background hover:bg-muted",
               )}
             >
-              {LIBELLES_TYPE_CLIENT[t].replace("Particulier ", "")}
+              {t === "regulier" ? "Régulier" : "Occasionnel"}
               <span className="block text-xs font-normal opacity-80">
                 {t === "regulier" ? "Commande chaque semaine" : "De temps en temps"}
               </span>

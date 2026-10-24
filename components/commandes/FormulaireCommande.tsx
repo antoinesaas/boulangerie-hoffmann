@@ -19,6 +19,7 @@ import { useFileAttente } from "@/lib/hooks/useFileAttente"
 import { ajouterOperation, lireFile, synchroniser } from "@/lib/offline/fileAttente"
 import {
   ajouterJours,
+  arrondi,
   aujourdhui,
   calcTTC,
   cn,
@@ -102,6 +103,7 @@ export function FormulaireCommande({ produits, clients, pointsDeVente, pointDeVe
     setQuantites({})
     setNotes("")
     setDate(ajouterJours(aujourdhui(), 1))
+    window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
   async function envoyer() {
@@ -234,12 +236,12 @@ export function FormulaireCommande({ produits, clients, pointsDeVente, pointDeVe
                 return (
                   <li key={p.id} className={cn("flex items-center gap-3 px-4 py-2", q > 0 && "bg-primary/5")}>
                     <div className="min-w-0 flex-1">
-                      <div className={cn("truncate font-medium", q > 0 && "font-semibold")}>{p.nom}</div>
+                      <div className={cn("line-clamp-2 leading-tight font-medium", q > 0 && "font-semibold")}>{p.nom}</div>
                       <div className="text-xs text-muted-foreground">
                         {formatPrix(calcTTC(p.prix_ht, p.tva))} / {formatUnite(p.unite, 1)}
                       </div>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex shrink-0 items-center">
                       <Button
                         type="button"
                         variant="outline"
@@ -308,7 +310,8 @@ export function FormulaireCommande({ produits, clients, pointsDeVente, pointDeVe
       </div>
 
       <Dialog open={confirmation} onOpenChange={(o) => !envoi && setConfirmation(o)}>
-        <DialogContent className="top-4 translate-y-0 sm:top-1/2 sm:-translate-y-1/2">
+        {/* En bas sur mobile : les boutons restent sous le pouce */}
+        <DialogContent className="top-auto bottom-[calc(1rem+env(safe-area-inset-bottom))] translate-y-0 sm:top-1/2 sm:bottom-auto sm:-translate-y-1/2">
           <DialogHeader>
             <DialogTitle>Envoyer au fornil ?</DialogTitle>
             <DialogDescription className="first-letter:uppercase">
@@ -323,7 +326,7 @@ export function FormulaireCommande({ produits, clients, pointsDeVente, pointDeVe
                   {l.produit.unite !== "pièce" && ` ${formatUnite(l.produit.unite, l.quantite)}`} × {l.produit.nom}
                 </span>
                 <span className="tabular-nums text-muted-foreground">
-                  {formatPrix(l.quantite * calcTTC(l.prix_ht, l.tva))}
+                  {formatPrix(arrondi(l.quantite * l.prix_ht * (1 + l.tva / 100)))}
                 </span>
               </li>
             ))}
