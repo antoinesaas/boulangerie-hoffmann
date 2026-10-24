@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next"
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Boulangerie Guillaume — Commandes",
+    name: "Boulangerie Hoffmann — Commandes",
     short_name: "Commandes",
     description: "Saisie et suivi des commandes de la boulangerie",
     start_url: "/",

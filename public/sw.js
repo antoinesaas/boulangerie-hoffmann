@@ -1,4 +1,4 @@
-// Service worker léger — Boulangerie Guillaume
+// Service worker léger — Boulangerie Hoffmann
 // - pages /vendeur/* : réseau d'abord, copie en cache pour pouvoir rouvrir l'écran hors ligne
 // - assets /_next/static : cache d'abord (fichiers versionnés)
 // Les commandes elles-mêmes sont mises en file dans localStorage par l'application.

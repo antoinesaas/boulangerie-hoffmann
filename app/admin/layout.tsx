@@ -12,7 +12,7 @@ export default async function LayoutAdmin({ children }: LayoutProps<"/admin">) {
       <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r bg-background md:flex">
         <Link href="/admin" className="flex h-16 items-center gap-2 border-b px-5 font-semibold">
           <WheatIcon className="size-5" />
-          Boulangerie Guillaume
+          Boulangerie Hoffmann
         </Link>
         <div className="flex-1 overflow-y-auto">
           <NavAdminLaterale />
@@ -30,7 +30,7 @@ export default async function LayoutAdmin({ children }: LayoutProps<"/admin">) {
         <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur md:hidden">
           <div className="flex h-14 items-center gap-2 px-4">
             <WheatIcon className="size-5" />
-            <span className="flex-1 truncate font-semibold">Boulangerie Guillaume</span>
+            <span className="flex-1 truncate font-semibold">Boulangerie Hoffmann</span>
             <MenuUtilisateur nom={profil.nom} role={profil.role} />
           </div>
           <NavAdminMobile />

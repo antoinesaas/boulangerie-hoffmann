@@ -13,7 +13,7 @@ export default function PageConnexion() {
             <WheatIcon className="size-7" />
           </div>
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Boulangerie Guillaume</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">Boulangerie Hoffmann</h1>
             <p className="text-sm text-muted-foreground">Gestion des commandes</p>
           </div>
         </div>

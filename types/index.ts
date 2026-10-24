@@ -1,5 +1,5 @@
 // =============================================================
-// Types globaux — Boulangerie Guillaume
+// Types globaux — Boulangerie Hoffmann
 // =============================================================
 
 export type Role = "vendeur" | "boulanger" | "admin"

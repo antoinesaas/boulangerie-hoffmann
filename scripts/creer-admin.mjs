@@ -1,6 +1,6 @@
 // Crée (ou met à jour) un compte avec son rôle.
 // Usage :
-//   npm run creer-admin  -- patron@exemple.fr "MotDePasse123" "Guillaume"
+//   npm run creer-admin  -- patron@exemple.fr "MotDePasse123" "Patron"
 //   npm run creer-compte -- vendeuse@exemple.fr "MotDePasse123" "Julie" vendeur Coffret
 //   npm run creer-compte -- fornil@exemple.fr "MotDePasse123" "Fornil" boulanger
 // Nécessite NEXT_PUBLIC_SUPABASE_URL et SUPABASE_SECRET_KEY dans .env.local

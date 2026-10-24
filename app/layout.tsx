@@ -16,11 +16,11 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Boulangerie Guillaume — Commandes",
-    template: "%s · Boulangerie Guillaume",
+    default: "Boulangerie Hoffmann — Commandes",
+    template: "%s · Boulangerie Hoffmann",
   },
   description: "Gestion des commandes de la boulangerie : saisie en boutique, fornil, chiffre d'affaires.",
-  applicationName: "Boulangerie Guillaume",
+  applicationName: "Boulangerie Hoffmann",
   appleWebApp: { capable: true, title: "Commandes", statusBarStyle: "default" },
 }
 

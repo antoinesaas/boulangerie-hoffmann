@@ -1,4 +1,4 @@
-# Boulangerie Guillaume — gestion des commandes
+# Boulangerie Hoffmann — gestion des commandes
 
 Application web qui remplace le papier et les messageries pour les commandes de la boulangerie :
 3 points de vente (Coffret, Merveille, Lermberg), clients professionnels en tournée, particuliers.
@@ -56,7 +56,7 @@ La clé secrète ne sert qu'à la gestion des comptes (création, mot de passe, 
 ### 4. Premier compte patron
 
 ```bash
-npm run creer-admin -- patron@exemple.fr "un-mot-de-passe-solide" "Guillaume"
+npm run creer-admin -- patron@exemple.fr "un-mot-de-passe-solide" "Patron"
 ```
 
 Ensuite, se connecter et créer les comptes vendeurs (rattachés à un point de vente) et boulangers dans **Utilisateurs**,
