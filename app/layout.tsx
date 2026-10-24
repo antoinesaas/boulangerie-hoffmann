@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
+import { EnregistrementSW } from "@/components/layout/EnregistrementSW"
 import { ThemeProvider } from "@/components/ThemeProvider"
 import { Toaster } from "@/components/ui/sonner"
 import "./globals.css"
@@ -21,7 +22,14 @@ export const metadata: Metadata = {
   },
   description: "Gestion des commandes de la boulangerie : saisie en boutique, fornil, chiffre d'affaires.",
   applicationName: "Boulangerie Hoffmann",
-  appleWebApp: { capable: true, title: "Commandes", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: "Hoffmann", statusBarStyle: "default" },
+  icons: {
+    icon: [
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }],
+  },
 }
 
 export const viewport: Viewport = {
@@ -45,6 +53,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
           {children}
           <Toaster position="top-center" richColors closeButton />
+          <EnregistrementSW />
         </ThemeProvider>
       </body>
     </html>

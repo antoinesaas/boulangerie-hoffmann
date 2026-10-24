@@ -4,7 +4,7 @@ import { ACCUEIL_PAR_ROLE, estRole, rolesAutorises } from "@/lib/roles"
 import type { Role } from "@/types"
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL, supabaseConfigure } from "./env"
 
-const CHEMINS_PUBLICS = ["/login", "/auth", "/offline"]
+const CHEMINS_PUBLICS = ["/login", "/activer", "/auth", "/offline"]
 
 function estPublic(chemin: string) {
   return CHEMINS_PUBLICS.some((p) => chemin === p || chemin.startsWith(`${p}/`))
@@ -12,8 +12,8 @@ function estPublic(chemin: string) {
 
 /**
  * Rafraîchit la session Supabase (cookies) puis applique le routage par rôle :
- *  - non connecté            -> /login
- *  - connecté sur /login ou / -> page d'accueil de son rôle
+ *  - non connecté                       -> /activer (appareil non activé)
+ *  - connecté sur /login, /activer ou / -> page d'accueil de son rôle
  *  - rôle non autorisé        -> page d'accueil de son rôle
  */
 export async function updateSession(request: NextRequest) {
@@ -58,11 +58,12 @@ export async function updateSession(request: NextRequest) {
 
   if (!userId) {
     if (estPublic(chemin)) return response
-    return rediriger("/login")
+    return rediriger("/activer")
   }
 
   const autorises = rolesAutorises(chemin)
-  if (chemin !== "/" && chemin !== "/login" && !autorises) {
+  const entree = chemin === "/" || chemin === "/login" || chemin === "/activer"
+  if (!entree && !autorises) {
     return response
   }
 
@@ -76,10 +77,10 @@ export async function updateSession(request: NextRequest) {
 
   if (!role) {
     // Compte sans rôle : la page de connexion affiche le message adéquat.
-    return chemin === "/login" ? response : rediriger("/login")
+    return chemin === "/login" || chemin === "/activer" ? response : rediriger("/activer")
   }
 
-  if (chemin === "/" || chemin === "/login") {
+  if (entree) {
     return rediriger(ACCUEIL_PAR_ROLE[role])
   }
 

@@ -18,5 +18,5 @@ export default async function Accueil() {
   }
 
   const session = await getSession()
-  redirect(session ? ACCUEIL_PAR_ROLE[session.profil.role] : "/login")
+  redirect(session ? ACCUEIL_PAR_ROLE[session.profil.role] : "/activer")
 }

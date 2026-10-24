@@ -2,7 +2,7 @@
 // Types globaux — Boulangerie Hoffmann
 // =============================================================
 
-export type Role = "vendeur" | "boulanger" | "admin"
+export type Role = "vendeur" | "boulanger" | "admin" | "appareil"
 
 export type StatutCommande = "en_attente" | "preparee" | "livree" | "annulee"
 
@@ -193,6 +193,7 @@ export const LIBELLES_ROLE: Record<Role, string> = {
   vendeur: "Vendeur",
   boulanger: "Boulanger (fornil)",
   admin: "Patron / Admin",
+  appareil: "Appareil de la boulangerie",
 }
 
 export const LIBELLES_STATUT: Record<StatutCommande, string> = {

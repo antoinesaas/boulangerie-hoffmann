@@ -1,6 +1,7 @@
 "use client"
 
-import { LogOutIcon, MoonIcon, SunIcon, UserIcon } from "lucide-react"
+import { ArrowLeftRightIcon, LogOutIcon, MoonIcon, SunIcon, UserIcon } from "lucide-react"
+import Link from "next/link"
 import { useTheme } from "next-themes"
 import { deconnexion } from "@/app/login/actions"
 import { Button } from "@/components/ui/button"
@@ -60,10 +61,19 @@ export function MenuUtilisateur({ nom, role, detail }: { nom: string; role: Role
           {resolvedTheme === "dark" ? <SunIcon /> : <MoonIcon />}
           {resolvedTheme === "dark" ? "Mode jour" : "Mode nuit"}
         </DropdownMenuItem>
-        <DropdownMenuItem className="min-h-11" variant="destructive" onSelect={() => void seDeconnecter()}>
-          <LogOutIcon />
-          Se déconnecter
-        </DropdownMenuItem>
+        {role === "appareil" ? (
+          <DropdownMenuItem className="min-h-11" asChild>
+            <Link href="/mode">
+              <ArrowLeftRightIcon />
+              Changer de mode
+            </Link>
+          </DropdownMenuItem>
+        ) : (
+          <DropdownMenuItem className="min-h-11" variant="destructive" onSelect={() => void seDeconnecter()}>
+            <LogOutIcon />
+            Se déconnecter
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   )

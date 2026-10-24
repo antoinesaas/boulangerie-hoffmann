@@ -11,7 +11,7 @@ export default async function PageUtilisateurs() {
   const { profil: moi } = await exigerRole("admin")
   const supabase = await createClient()
   const [profils, pdv] = await Promise.all([
-    supabase.from("profils").select("*").order("nom"),
+    supabase.from("profils").select("*").neq("role", "appareil").order("nom"),
     supabase.from("points_de_vente").select("id, nom").order("ordre").order("nom"),
   ])
 

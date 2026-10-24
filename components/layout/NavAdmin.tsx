@@ -7,6 +7,7 @@ import {
   FlameIcon,
   LayoutDashboardIcon,
   PlusCircleIcon,
+  SmartphoneIcon,
   StoreIcon,
   UserCogIcon,
   UsersIcon,
@@ -22,7 +23,8 @@ export const LIENS_ADMIN = [
   { href: "/admin/produits", libelle: "Produits", icone: CroissantIcon },
   { href: "/admin/clients", libelle: "Clients", icone: UsersIcon },
   { href: "/admin/points-de-vente", libelle: "Points de vente", icone: StoreIcon },
-  { href: "/admin/utilisateurs", libelle: "Utilisateurs", icone: UserCogIcon },
+  { href: "/admin/appareils", libelle: "Appareils", icone: SmartphoneIcon },
+  { href: "/admin/utilisateurs", libelle: "Comptes patron", icone: UserCogIcon },
 ] as const
 
 const RACCOURCIS = [

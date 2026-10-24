@@ -4,13 +4,18 @@ export const ACCUEIL_PAR_ROLE: Record<Role, string> = {
   vendeur: "/vendeur/commande",
   boulanger: "/fornil",
   admin: "/admin",
+  appareil: "/mode",
 }
+
+/** Cookie mémorisant la boutique choisie sur un appareil en mode vendeur. */
+export const COOKIE_BOUTIQUE = "bg_boutique"
 
 /** Préfixes protégés et rôles autorisés (l'admin a accès à tout). */
 const ACCES: { prefixe: string; roles: Role[] }[] = [
   { prefixe: "/admin", roles: ["admin"] },
-  { prefixe: "/fornil", roles: ["boulanger", "admin"] },
-  { prefixe: "/vendeur", roles: ["vendeur", "admin"] },
+  { prefixe: "/fornil", roles: ["boulanger", "admin", "appareil"] },
+  { prefixe: "/vendeur", roles: ["vendeur", "admin", "appareil"] },
+  { prefixe: "/mode", roles: ["appareil", "admin"] },
 ]
 
 export function rolesAutorises(chemin: string): Role[] | null {
@@ -19,5 +24,5 @@ export function rolesAutorises(chemin: string): Role[] | null {
 }
 
 export function estRole(valeur: unknown): valeur is Role {
-  return valeur === "vendeur" || valeur === "boulanger" || valeur === "admin"
+  return valeur === "vendeur" || valeur === "boulanger" || valeur === "admin" || valeur === "appareil"
 }

@@ -1,8 +1,9 @@
 import "server-only"
 
+import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 import { cache } from "react"
-import { ACCUEIL_PAR_ROLE, estRole } from "@/lib/roles"
+import { ACCUEIL_PAR_ROLE, COOKIE_BOUTIQUE, estRole } from "@/lib/roles"
 import { createClient } from "@/lib/supabase/server"
 import type { PointDeVente, Profil, Role } from "@/types"
 
@@ -29,13 +30,30 @@ export const getSession = cache(async (): Promise<Session | null> => {
   const { point_de_vente, ...reste } = profil as Profil & {
     point_de_vente: Pick<PointDeVente, "id" | "nom"> | null
   }
+
+  // Appareil partagé : la boutique est celle choisie sur l'écran de mode.
+  if (reste.role === "appareil") {
+    const boutiqueId = (await cookies()).get(COOKIE_BOUTIQUE)?.value
+    let boutique: Pick<PointDeVente, "id" | "nom"> | null = null
+    if (boutiqueId && /^[0-9a-f-]{36}$/.test(boutiqueId)) {
+      const { data } = await supabase
+        .from("points_de_vente")
+        .select("id, nom")
+        .eq("id", boutiqueId)
+        .eq("actif", true)
+        .maybeSingle()
+      boutique = data
+    }
+    return { profil: reste as Session["profil"], pointDeVente: boutique }
+  }
+
   return { profil: reste as Session["profil"], pointDeVente: point_de_vente }
 })
 
 /** À appeler en tête de page/action : redirige si le rôle n'est pas autorisé. */
 export async function exigerRole(...roles: Role[]): Promise<Session> {
   const session = await getSession()
-  if (!session) redirect("/login")
+  if (!session) redirect("/activer")
   if (!roles.includes(session.profil.role)) redirect(ACCUEIL_PAR_ROLE[session.profil.role])
   return session
 }

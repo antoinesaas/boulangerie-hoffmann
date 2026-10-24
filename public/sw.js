@@ -1,9 +1,9 @@
 // Service worker léger — Boulangerie Hoffmann
-// - pages /vendeur/* : réseau d'abord, copie en cache pour pouvoir rouvrir l'écran hors ligne
+// - pages /vendeur/* et /mode : réseau d'abord, copie en cache pour pouvoir rouvrir l'écran hors ligne
 // - assets /_next/static : cache d'abord (fichiers versionnés)
 // Les commandes elles-mêmes sont mises en file dans localStorage par l'application.
 
-const CACHE = "bg-v1"
+const CACHE = "bg-v2"
 const PAGE_HORS_LIGNE = "/offline"
 
 self.addEventListener("install", (event) => {
@@ -36,7 +36,7 @@ self.addEventListener("fetch", (event) => {
     return
   }
 
-  if (requete.mode === "navigate" && url.pathname.startsWith("/vendeur")) {
+  if (requete.mode === "navigate" && (url.pathname.startsWith("/vendeur") || url.pathname === "/mode")) {
     event.respondWith(reseauDabord(requete))
   }
 })

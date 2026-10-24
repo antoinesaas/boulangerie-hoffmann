@@ -8,7 +8,7 @@ import type { Client, PointDeVente, Produit } from "@/types"
 export const metadata: Metadata = { title: "Nouvelle commande" }
 
 export default async function PageNouvelleCommande() {
-  const { profil, pointDeVente } = await exigerRole("vendeur", "admin")
+  const { profil, pointDeVente } = await exigerRole("vendeur", "admin", "appareil")
   const supabase = await createClient()
 
   // Pros et réguliers : tous. Occasionnels : les plus récents (les autres via la recherche serveur).
@@ -41,7 +41,7 @@ export default async function PageNouvelleCommande() {
       produits={(produits.data ?? []) as Produit[]}
       clients={clients}
       pointsDeVente={(pointsDeVente.data ?? []) as Pick<PointDeVente, "id" | "nom">[]}
-      pointDeVenteFixe={profil.role === "vendeur" ? pointDeVente : null}
+      pointDeVenteFixe={profil.role === "admin" ? null : pointDeVente}
     />
   )
 }

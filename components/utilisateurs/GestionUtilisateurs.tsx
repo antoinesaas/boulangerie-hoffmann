@@ -51,8 +51,8 @@ export function GestionUtilisateurs({ moiId, profils, pointsDeVente, connexions,
   return (
     <div>
       <EnTetePage
-        titre="Utilisateurs"
-        description="Comptes des vendeurs, boulangers et du patron. Chaque vendeur est rattaché à un point de vente."
+        titre="Comptes patron"
+        description="Comptes avec email et mot de passe (le patron, un associé…). Les boutiques et le fornil utilisent des appareils activés, voir « Appareils »."
         actions={
           <Button className="h-10" onClick={() => setCreation(true)} disabled={!gestionActive}>
             <PlusIcon /> Nouveau compte
@@ -227,7 +227,7 @@ function FormCreation({
   pointsDeVente: Pick<PointDeVente, "id" | "nom">[]
   surFin: () => void
 }) {
-  const [role, setRole] = useState<Role>("vendeur")
+  const [role, setRole] = useState<Role>("admin")
   const [pdv, setPdv] = useState(pointsDeVente[0]?.id ?? "")
   const [enCours, setEnCours] = useState(false)
 

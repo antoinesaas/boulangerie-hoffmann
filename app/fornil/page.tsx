@@ -7,7 +7,7 @@ import type { PointDeVente } from "@/types"
 export const metadata: Metadata = { title: "Fornil" }
 
 export default async function PageFornil() {
-  const { profil } = await exigerRole("boulanger", "admin")
+  const { profil } = await exigerRole("boulanger", "admin", "appareil")
   const supabase = await createClient()
   const { data: pointsDeVente } = await supabase
     .from("points_de_vente")

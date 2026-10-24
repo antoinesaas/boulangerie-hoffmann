@@ -115,7 +115,7 @@ export function FormulaireCommande({ produits, clients, pointsDeVente, pointDeVe
       p_date_livraison: date,
       p_lignes: lignes.map((l) => ({ produit_id: l.produit.id, quantite: l.quantite })),
       p_notes: notes.trim() || null,
-      p_point_de_vente_id: pointDeVenteFixe ? null : pdvId,
+      p_point_de_vente_id: pointDeVenteFixe?.id ?? pdvId,
     }
     ajouterOperation({
       type: "commande",
