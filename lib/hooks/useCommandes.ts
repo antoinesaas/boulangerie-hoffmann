@@ -24,6 +24,8 @@ export function useCommandes(filtres: FiltresCommandes) {
   const [commandes, setCommandes] = useState<CommandeDetail[]>([])
   const [chargement, setChargement] = useState(true)
   const [erreur, setErreur] = useState<string | null>(null)
+  // Plage effectivement chargée (pour distinguer un changement de jour d'une nouvelle commande)
+  const [plageChargee, setPlageChargee] = useState("")
   const { dateDebut, dateFin, pointDeVenteId } = filtres
   const cleStatuts = filtres.statuts?.join(",") ?? ""
 
@@ -47,6 +49,7 @@ export function useCommandes(filtres: FiltresCommandes) {
     } else {
       setErreur(null)
       setCommandes(trierLignes(data as CommandeDetail[]))
+      setPlageChargee(`${dateDebut}|${dateFin}|${pointDeVenteId ?? ""}|${cleStatuts}`)
     }
     setChargement(false)
   }, [dateDebut, dateFin, pointDeVenteId, cleStatuts])
@@ -64,7 +67,7 @@ export function useCommandes(filtres: FiltresCommandes) {
     setCommandes((liste) => liste.map((c) => (c.id === id ? { ...c, ...patch } : c)))
   }, [])
 
-  return { commandes, chargement, erreur, recharger: charger, realtime, majLocale }
+  return { commandes, chargement, erreur, recharger: charger, realtime, majLocale, plageChargee }
 }
 
 function trierLignes(commandes: CommandeDetail[]): CommandeDetail[] {

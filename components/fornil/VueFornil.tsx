@@ -65,14 +65,14 @@ export function VueFornil({ pointsDeVente, produits, utilisateur }: Props) {
   const dateDebut = jourActif < jour ? jourActif : jour
   const dateFin = jourActif > finSemaineAVenir ? jourActif : finSemaineAVenir
 
-  const { commandes, chargement, erreur, realtime, majLocale, recharger } = useCommandes({
+  const { commandes, chargement, erreur, realtime, majLocale, recharger, plageChargee } = useCommandes({
     dateDebut,
     dateFin,
     statuts: ["en_attente", "preparee", "livree"],
   })
   const { pointees, pointer } = useProduction(jourActif)
 
-  useAlerteNouvellesCommandes(commandes, chargement, `${dateDebut}|${dateFin}`, son.jouer)
+  useAlerteNouvellesCommandes(commandes, chargement, plageChargee, son.jouer)
 
   const duJour = useMemo(() => commandes.filter((c) => c.date_livraison === jourActif), [commandes, jourActif])
   const lignesProduction = useMemo(() => aProduire(duJour, pointees), [duJour, pointees])
@@ -571,12 +571,14 @@ function OngletHabituelles({
                     <p className="text-sm text-muted-foreground">via {h.point_de_vente.nom}</p>
                   )}
                   <ul className="mt-2 space-y-0.5 text-lg">
-                    {h.lignes.map((l) => (
+                    {[...h.lignes]
+                      .sort((a, b) => (parId.get(a.produit_id)?.ordre ?? 0) - (parId.get(b.produit_id)?.ordre ?? 0))
+                      .map((l) => (
                       <li key={l.produit_id}>
                         <strong className="tabular-nums">{formatQuantite(l.quantite)}</strong>{" "}
                         {parId.get(l.produit_id)?.nom ?? "Produit"}
                       </li>
-                    ))}
+                      ))}
                   </ul>
                 </article>
               ))}

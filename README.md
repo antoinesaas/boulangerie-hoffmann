@@ -34,6 +34,7 @@ Exécuter dans l'ordre, dans **SQL Editor** (ou `supabase db push` avec la CLI l
 3. `supabase/migrations/20261024000003_vues_ca_agregees.sql` — vues CA agrégées
 4. `supabase/migrations/20261024000004_index_clients.sql` — index de performance
 5. `supabase/migrations/20261024000005_appareils.sql` — appareils activés et codes d'activation
+6. `supabase/migrations/20261026000006_habituelles_production.sql` — commandes habituelles, décompte de production, type Tournée
 5. `supabase/seed.sql` — points de vente, clients pros, produits par défaut (relançable sans doublons)
 
 Les versions appliquées sont enregistrées dans `supabase_migrations.schema_migrations` (compatible `supabase db push`).
@@ -93,6 +94,27 @@ Node.js ≥ 20.9 (Vercel par défaut).
 
 Sur iPhone / iPad, installer d'abord l'app (Safari → Partager → Sur l'écran d'accueil), puis l'activer
 **depuis l'icône** : l'app installée a sa propre mémoire.
+
+## Commandes habituelles
+
+En saisissant une commande, « Toutes les semaines » la répète chaque semaine aux jours cochés (activé d'office
+pour un client régulier ou une boutique). Les commandes des semaines à venir sont créées automatiquement.
+Dans « Mes commandes » : **Annuler cette semaine** (une seule date) ou **Arrêter pour toujours**.
+
+## Fornil
+
+- **À produire** : une ligne par produit avec la quantité restante (ex. 111 Baguette tradition). « Fait » la retire,
+  un appui sur le chiffre permet d'indiquer une partie faite. Une commande arrivée après ne fait réapparaître que la différence.
+- **Envois** : une carte par boutique (habituelle + commandes des clients de la boutique, additionnées) et une carte par
+  client livré (tournée, marché, pro). Un seul bouton « Prêt » valide tout l'envoi.
+- **Habituelles** : ce que chaque boutique / client reçoit chaque jour de la semaine.
+
+## Tests
+
+```bash
+npm test          # décompte et envois du fornil (scénarios réalistes)
+npm run test:sql  # 76 tests RLS, triggers, habitudes, production (Postgres embarqué)
+```
 
 ## Fonctionnement
 

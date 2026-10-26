@@ -289,7 +289,9 @@ function Habituelles({ pdv, produits }: { pdv: string | null; produits: Props["p
             </Button>
           </div>
           <ul className="mt-2 space-y-0.5 text-sm">
-            {h.lignes.map((l) => (
+            {[...h.lignes]
+              .sort((a, b) => produits.findIndex((p) => p.id === a.produit_id) - produits.findIndex((p) => p.id === b.produit_id))
+              .map((l) => (
               <li key={l.produit_id}>
                 <span className="font-semibold tabular-nums">{formatQuantite(l.quantite)}</span>{" "}
                 {nomsProduits.get(l.produit_id)?.nom ?? "Produit"}
