@@ -5,7 +5,9 @@ import { describe, it } from "node:test"
 import {
   aPreparer,
   cleProduction,
+  commandesPretes,
   grouperParDestination,
+  notesParProduit,
   productionParDestination,
   recapProduction,
   sommeProduits,
@@ -158,5 +160,53 @@ describe("Décompte « À produire » par magasin", () => {
   it("ne descend jamais sous zéro", () => {
     const pointees = new Map([[cleProduction("pdv-coffret", "p-trad"), 500]])
     assert.equal(production(journee(), pointees).reste("Coffret", "Baguette tradition"), 0)
+  })
+})
+
+describe("Commandes prêtes chez la vendeuse", () => {
+  // Coffret : habituelle 90 trads + 40 croissants, M. Bertrand 1 trad, Antoine 2 trads, Mme Durand 1 trad + 2 croissants
+  function coffret(pointees: Map<string, number>) {
+    const cmds = [
+      ...journee(),
+      commande({ nom: "Antoine", type: "occasionnel" }, "pdv-coffret", [["trad", 2]]),
+      commande({ nom: "Mme Durand", type: "occasionnel" }, "pdv-coffret", [["trad", 1], ["croissant", 2]]),
+    ]
+    const p = productionParDestination(grouperParDestination(cmds, BOUTIQUES), pointees).find((x) => x.destination.nom === "Coffret")!
+    return commandesPretes(p.destination, p.lignes).map((c) => c.client?.nom)
+  }
+
+  it("94 trads finies pour Coffret : Antoine et M. Bertrand passent prêts, pas ceux qui attendent des croissants", () => {
+    assert.deepEqual(coffret(new Map([[cleProduction("pdv-coffret", "p-trad"), 94]])), ["M. Bertrand", "Antoine"])
+  })
+
+  it("les croissants finis aussi : toutes les commandes Coffret sont prêtes", () => {
+    const pointees = new Map([
+      [cleProduction("pdv-coffret", "p-trad"), 94],
+      [cleProduction("pdv-coffret", "p-croissant"), 42],
+    ])
+    assert.deepEqual(coffret(pointees), ["Coffret", "M. Bertrand", "Antoine", "Mme Durand"])
+  })
+
+  it("une partie seulement des trads : aucune commande n'est marquée prête", () => {
+    assert.deepEqual(coffret(new Map([[cleProduction("pdv-coffret", "p-trad"), 50]])), [])
+  })
+
+  it("les trads finies pour Merveille ne rendent pas prêtes les commandes de Coffret", () => {
+    assert.deepEqual(coffret(new Map([[cleProduction("pdv-merveille", "p-trad"), 30]])), [])
+  })
+})
+
+describe("Notes sous le produit concerné", () => {
+  it("« bien cuite » de M. Bertrand apparaît sous la baguette tradition de Coffret, avec la quantité", () => {
+    const coffret = grouperParDestination(journee(), BOUTIQUES).find((x) => x.nom === "Coffret")!
+    const notes = notesParProduit(coffret)
+    assert.deepEqual(notes.get("p-trad"), [{ commande_id: "cmd-2", note: "bien cuite", client: "M. Bertrand", quantite: 1 }])
+    assert.equal(notes.get("p-croissant"), undefined)
+  })
+
+  it("la note disparaît une fois la commande prête", () => {
+    const cmds = journee().map((c) => (c.client?.nom === "M. Bertrand" ? { ...c, statut: "preparee" as const } : c))
+    const coffret = grouperParDestination(cmds, BOUTIQUES).find((x) => x.nom === "Coffret")!
+    assert.equal(notesParProduit(coffret).size, 0)
   })
 })

@@ -138,3 +138,34 @@ export function recapProduction(par: ProductionDestination[]): LigneAProduire[] 
 export function aPreparer(d: Destination): CommandeDetail[] {
   return d.commandes.filter((c) => c.statut === "en_attente")
 }
+
+/**
+ * Commandes d'une destination dont tous les produits sont finis : elles passent « prêtes »
+ * (ex. 113 trads finies pour Coffret → la commande de 2 trads d'Antoine est prête).
+ */
+export function commandesPretes(d: Destination, lignes: LigneAProduire[]): CommandeDetail[] {
+  const finis = new Set(lignes.filter((l) => l.reste <= 0).map((l) => l.produit_id))
+  return aPreparer(d).filter((c) => c.lignes.length > 0 && c.lignes.every((l) => finis.has(l.produit_id)))
+}
+
+export interface NoteProduit {
+  commande_id: string
+  note: string
+  client: string | null
+  quantite: number
+}
+
+/** Notes des commandes à préparer, rangées sous chaque produit concerné (« 1 bien cuite — M. Bertrand »). */
+export function notesParProduit(d: Destination): Map<string, NoteProduit[]> {
+  const parProduit = new Map<string, NoteProduit[]>()
+  for (const c of aPreparer(d)) {
+    const note = c.notes?.trim()
+    if (!note) continue
+    for (const l of c.lignes) {
+      const liste = parProduit.get(l.produit_id) ?? []
+      liste.push({ commande_id: c.id, note, client: c.client?.nom ?? null, quantite: Number(l.quantite) })
+      parProduit.set(l.produit_id, liste)
+    }
+  }
+  return parProduit
+}

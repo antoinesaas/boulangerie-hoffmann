@@ -19,7 +19,9 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
   aPreparer,
+  commandesPretes,
   grouperParDestination,
+  notesParProduit,
   productionParDestination,
   recapProduction,
   type Destination,
@@ -207,15 +209,21 @@ function OngletProduire({
   const boutiques = production.filter((p) => !p.destination.livraison)
   const livraisons = production.filter((p) => p.destination.livraison)
 
-  /** Valide une ligne ; si c'était la dernière du magasin, l'envoi passe « prêt » tout seul. */
+  /** Valide une ligne ; les commandes dont tous les produits sont finis passent « prêtes » chez la vendeuse. */
   async function valider(p: ProductionDestination, l: LigneAProduire, quantite: number) {
     const avant = l.faite
     await pointer(p.destination.cle, l.produit_id, quantite)
-    const finiAussi = quantite >= l.total && p.lignes.every((x) => x.produit_id === l.produit_id || x.reste <= 0)
-    const ids = finiAussi ? aPreparer(p.destination).map((c) => c.id) : []
+    const lignesApres = p.lignes.map((x) =>
+      x.produit_id === l.produit_id ? { ...x, faite: quantite, reste: Math.max(0, x.total - quantite) } : x,
+    )
+    const ids = commandesPretes(p.destination, lignesApres).map((c) => c.id)
     if (ids.length) await marquer(ids, "preparee")
+    const toutPret = lignesApres.every((x) => x.reste <= 0)
     toast.success(
-      finiAussi ? `${p.destination.nom} : tout est prêt` : `${p.destination.nom} : ${formatQuantite(quantite - avant)} ${l.nom}`,
+      toutPret
+        ? `${p.destination.nom} : tout est prêt`
+        : `${p.destination.nom} : ${formatQuantite(quantite - avant)} ${l.nom}` +
+            (ids.length ? ` · ${ids.length} commande${ids.length > 1 ? "s" : ""} prête${ids.length > 1 ? "s" : ""}` : ""),
       {
         action: {
           label: "Annuler",
@@ -318,7 +326,7 @@ function CarteProduction({
   const { destination, lignes } = production
   const restantes = lignes.filter((l) => l.reste > 0)
   const finies = lignes.filter((l) => l.reste <= 0)
-  const notes = aPreparer(destination).filter((c) => c.notes)
+  const notes = notesParProduit(destination)
 
   if (restantes.length === 0) {
     return (
@@ -360,6 +368,15 @@ function CarteProduction({
                   {formatQuantite(l.faite)} déjà faits sur {formatQuantite(l.total)}
                 </div>
               )}
+              {notes.get(l.produit_id)?.map((n) => (
+                <div
+                  key={n.commande_id}
+                  className="mt-1 rounded-md bg-amber-100/80 px-2 py-0.5 text-base text-amber-950 dark:bg-amber-500/15 dark:text-amber-100"
+                >
+                  <strong className="tabular-nums">{formatQuantite(n.quantite)}</strong> <em>{n.note}</em>
+                  {n.client && <span className="opacity-70"> — {n.client}</span>}
+                </div>
+              ))}
             </div>
             <Button
               onClick={() => surFini(l)}
@@ -371,17 +388,6 @@ function CarteProduction({
           </li>
         ))}
       </ul>
-
-      {notes.length > 0 && (
-        <ul className="mt-3 space-y-1 rounded-lg bg-amber-100/70 px-3 py-2 text-base text-amber-950 dark:bg-amber-500/15 dark:text-amber-100">
-          {notes.map((c) => (
-            <li key={c.id} className="italic">
-              {c.notes}
-              {!destination.livraison && c.client && <span className="not-italic opacity-70"> — {c.client.nom}</span>}
-            </li>
-          ))}
-        </ul>
-      )}
 
       {finies.length > 0 && (
         <p className="mt-3 flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground print:hidden">
