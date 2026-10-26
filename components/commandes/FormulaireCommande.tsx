@@ -227,7 +227,7 @@ export function FormulaireCommande({ produits, clients, pointsDeVente, pointDeVe
               onClick={() => setDate(r.valeur)}
               aria-pressed={date === r.valeur}
               className={cn(
-                "min-h-11 rounded-lg border text-sm font-medium transition-colors",
+                "min-h-11 whitespace-nowrap rounded-lg border px-0.5 text-xs font-medium transition-colors min-[400px]:text-sm",
                 date === r.valeur ? "border-primary bg-primary text-primary-foreground" : "hover:bg-muted",
               )}
             >
@@ -241,7 +241,7 @@ export function FormulaireCommande({ produits, clients, pointsDeVente, pointDeVe
           value={date}
           min={aujourdhui()}
           onChange={(e) => e.target.value && setDate(e.target.value)}
-          className="h-12 w-full rounded-lg border bg-transparent px-3 text-base"
+          className="champ-date h-12 w-full min-w-0 rounded-lg border bg-transparent px-3 text-base"
         />
         <p className="mt-1 text-sm text-muted-foreground first-letter:uppercase">{formatDate(date)}</p>
 

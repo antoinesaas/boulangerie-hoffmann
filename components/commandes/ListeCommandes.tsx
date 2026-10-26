@@ -102,7 +102,7 @@ export function ListeCommandes(props: Props) {
               onglet === valeur ? "bg-background shadow-sm" : "text-muted-foreground",
             )}
           >
-            <Icone className="size-4" /> {libelle}
+            <Icone className="hidden size-4 min-[400px]:block" /> {libelle}
           </button>
         ))}
       </div>

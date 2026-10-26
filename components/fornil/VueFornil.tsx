@@ -2,18 +2,15 @@
 
 import {
   CheckIcon,
-  ClipboardListIcon,
   Loader2Icon,
   PrinterIcon,
-  RepeatIcon,
   StoreIcon,
   TruckIcon,
-  Undo2Icon,
   Volume2Icon,
   VolumeXIcon,
   WheatIcon,
 } from "lucide-react"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 import { BandeauJours, NB_JOURS_BANDEAU } from "@/components/calendrier/BandeauJours"
 import { MenuUtilisateur } from "@/components/layout/MenuUtilisateur"
@@ -25,15 +22,12 @@ import {
   grouperParDestination,
   productionParDestination,
   recapProduction,
-  sommeProduits,
   type Destination,
   type LigneAProduire,
   type ProductionDestination,
 } from "@/lib/fornil"
 import { changerStatut, useCommandes } from "@/lib/hooks/useCommandes"
 import { useProduction } from "@/lib/hooks/useProduction"
-import { useRealtime } from "@/lib/hooks/useRealtime"
-import { createClient } from "@/lib/supabase/client"
 import {
   ajouterJours,
   aujourdhui,
@@ -43,13 +37,9 @@ import {
   formatJourSemaine,
   formatQuantite,
   formatUnite,
-  jourSemaineIso,
 } from "@/lib/utils"
 import {
-  NOMS_JOURS_SEMAINE,
-  type CommandeRecurrenteDetail,
   type PointDeVente,
-  type Produit,
   type Role,
   type StatutCommande,
 } from "@/types"
@@ -57,16 +47,12 @@ import { useSon } from "./son"
 
 interface Props {
   pointsDeVente: Pick<PointDeVente, "id" | "nom">[]
-  produits: Pick<Produit, "id" | "nom" | "unite" | "ordre">[]
   utilisateur: { nom: string; role: Role }
 }
 
-type Onglet = "produire" | "expeditions" | "habituelles"
-
-export function VueFornil({ pointsDeVente, produits, utilisateur }: Props) {
+export function VueFornil({ pointsDeVente, utilisateur }: Props) {
   const [jour] = useState(aujourdhui)
   const [jourActif, setJourActif] = useState(jour)
-  const [onglet, setOnglet] = useState<Onglet>("produire")
   const son = useSon()
 
   // La semaine à venir est toujours chargée ; un jour choisi au calendrier élargit la plage.
@@ -108,8 +94,8 @@ export function VueFornil({ pointsDeVente, produits, utilisateur }: Props) {
     <div className="flex min-h-dvh flex-col bg-muted/40 print:bg-white">
       <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur print:static print:border-0">
         <div className="flex flex-wrap items-center gap-3 px-4 py-3 lg:px-6">
-          <WheatIcon className="size-7 print:hidden" />
-          <div className="min-w-0 flex-1">
+          <WheatIcon className="hidden size-7 sm:block print:hidden" />
+          <div className="min-w-0 flex-1 basis-56">
             <h1 className="text-xl font-bold first-letter:uppercase lg:text-2xl">
               <span className="print:hidden">{formatDate(jour)}</span>
               <span className="hidden print:inline">Fornil — {formatDate(jourActif)}</span>
@@ -125,8 +111,8 @@ export function VueFornil({ pointsDeVente, produits, utilisateur }: Props) {
               {formatJourSemaine(jourActif)} {formatJourMoisCourt(jourActif)} ·{" "}
               <strong className="text-foreground tabular-nums">{resteProduits.length}</strong> produit
               {resteProduits.length > 1 ? "s" : ""} à faire ·{" "}
-              <strong className="text-foreground tabular-nums">{destinationsAPreparer.length}</strong> envoi
-              {destinationsAPreparer.length > 1 ? "s" : ""} à préparer
+              <strong className="text-foreground tabular-nums">{destinationsAPreparer.length}</strong> magasin
+              {destinationsAPreparer.length > 1 ? "s" : ""} à servir
             </p>
           </div>
           <div className="flex items-center gap-2 print:hidden">
@@ -148,58 +134,22 @@ export function VueFornil({ pointsDeVente, produits, utilisateur }: Props) {
           </div>
         </div>
 
-        <div className="space-y-3 px-4 pb-3 lg:px-6 print:hidden">
+        <div className="px-4 pb-3 lg:px-6 print:hidden">
           <BandeauJours grand jour={jourActif} surChoix={setJourActif} enAttente={enAttenteParJour} />
-          <div className="grid grid-cols-3 gap-2" role="tablist">
-            {(
-              [
-                ["produire", "À produire", ClipboardListIcon, resteProduits.length],
-                ["expeditions", "Envois", TruckIcon, destinationsAPreparer.length],
-                ["habituelles", "Habituelles", RepeatIcon, null],
-              ] as const
-            ).map(([valeur, libelle, Icone, compte]) => (
-              <button
-                key={valeur}
-                role="tab"
-                aria-selected={onglet === valeur}
-                onClick={() => setOnglet(valeur)}
-                className={cn(
-                  "flex min-h-14 items-center justify-center gap-2 rounded-xl border-2 text-lg font-semibold transition-colors",
-                  onglet === valeur ? "border-foreground bg-foreground text-background" : "border-border bg-background",
-                )}
-              >
-                <Icone className="size-5" /> {libelle}
-                {compte !== null && compte > 0 && (
-                  <span
-                    className={cn(
-                      "rounded-full px-2 text-base tabular-nums",
-                      onglet === valeur ? "bg-background/20" : "bg-amber-200 text-amber-950",
-                    )}
-                  >
-                    {compte}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
         </div>
       </header>
 
       <main className="flex-1 px-4 py-6 lg:px-6">
         {erreur && <p className="mb-4 rounded-xl bg-destructive/10 p-4 text-lg text-destructive">{erreur}</p>}
 
-        {onglet === "habituelles" ? (
-          <OngletHabituelles produits={produits} jourMisEnAvant={jourSemaineIso(jourActif)} />
-        ) : chargement ? (
+        {chargement ? (
           <div className="flex justify-center py-20">
             <Loader2Icon className="size-10 animate-spin text-muted-foreground" />
           </div>
         ) : duJour.length === 0 ? (
           <p className="py-20 text-center text-2xl text-muted-foreground">Aucune commande pour ce jour.</p>
-        ) : onglet === "produire" ? (
-          <OngletProduire recap={lignesProduction} production={production} pointer={pointer} marquer={marquer} />
         ) : (
-          <OngletEnvois destinations={destinations} marquer={marquer} />
+          <OngletProduire recap={lignesProduction} production={production} pointer={pointer} marquer={marquer} />
         )}
       </main>
     </div>
@@ -332,15 +282,15 @@ function BandeauTotal({ recap }: { recap: LigneAProduire[] }) {
   }
   return (
     <section className="rounded-2xl border-2 bg-card p-4 print:break-after-page">
-      <h2 className="mb-3 text-lg font-bold uppercase tracking-wide text-muted-foreground">
+      <h2 className="mb-3 text-base font-bold uppercase tracking-wide text-muted-foreground sm:text-lg">
         Reste à produire — total (reste / commandé)
       </h2>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {recap.map((l) => (
           <div key={l.produit_id} className={cn("rounded-xl bg-muted/60 p-3", l.reste <= 0 && "opacity-40")}>
-            <div className="text-4xl font-black tabular-nums leading-none">
+            <div className="whitespace-nowrap text-3xl font-black tabular-nums leading-none sm:text-4xl">
               {l.reste <= 0 ? <CheckIcon className="inline size-8 text-emerald-600" /> : formatQuantite(l.reste)}
-              <span className="text-lg font-semibold text-muted-foreground"> / {formatQuantite(l.total)}</span>
+              <span className="text-base font-semibold text-muted-foreground sm:text-lg"> / {formatQuantite(l.total)}</span>
             </div>
             <div className="mt-1 text-base font-medium leading-tight">
               {l.nom}
@@ -514,209 +464,5 @@ function DialogPartiel({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
-}
-
-/** Onglet « Envois » : par boutique ou client livré, les quantités à envoyer et un seul bouton « Prêt ». */
-function OngletEnvois({
-  destinations,
-  marquer,
-}: {
-  destinations: Destination[]
-  marquer: (ids: string[], statut: StatutCommande) => Promise<boolean>
-}) {
-  const boutiques = destinations.filter((d) => !d.livraison)
-  const livraisons = destinations.filter((d) => d.livraison)
-
-  return (
-    <div className="space-y-8">
-      {boutiques.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="flex items-center gap-2 text-2xl font-bold">
-            <StoreIcon className="size-6" /> Boutiques
-          </h2>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 print:block print:space-y-3">
-            {boutiques.map((d) => (
-              <CarteEnvoi key={d.cle} destination={d} marquer={marquer} />
-            ))}
-          </div>
-        </section>
-      )}
-      {livraisons.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="flex items-center gap-2 text-2xl font-bold">
-            <TruckIcon className="size-6" /> Livraisons
-          </h2>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 print:block print:space-y-3">
-            {livraisons.map((d) => (
-              <CarteEnvoi key={d.cle} destination={d} marquer={marquer} />
-            ))}
-          </div>
-        </section>
-      )}
-    </div>
-  )
-}
-
-function CarteEnvoi({
-  destination,
-  marquer,
-}: {
-  destination: Destination
-  marquer: (ids: string[], statut: StatutCommande) => Promise<boolean>
-}) {
-  const [enCours, setEnCours] = useState(false)
-  const [dernierEnvoi, setDernierEnvoi] = useState<string[]>([])
-  const restantes = aPreparer(destination)
-  const produits = sommeProduits(restantes)
-  const notes = restantes.filter((c) => c.notes)
-
-  async function valider() {
-    const ids = restantes.map((c) => c.id)
-    setEnCours(true)
-    if (await marquer(ids, "preparee")) {
-      setDernierEnvoi(ids)
-      toast.success(`${destination.nom} : prêt`)
-    }
-    setEnCours(false)
-  }
-
-  if (restantes.length === 0) {
-    return (
-      <article className="flex items-center gap-3 rounded-2xl border-2 border-emerald-500/40 bg-emerald-50/60 p-4 opacity-80 dark:bg-emerald-950/30 print:hidden">
-        <CheckIcon className="size-7 text-emerald-600" />
-        <span className="flex-1 text-xl font-semibold">{destination.nom} · prêt</span>
-        {dernierEnvoi.length > 0 && (
-          <Button
-            variant="ghost"
-            onClick={async () => {
-              if (await marquer(dernierEnvoi, "en_attente")) setDernierEnvoi([])
-            }}
-          >
-            <Undo2Icon /> Annuler
-          </Button>
-        )}
-      </article>
-    )
-  }
-
-  return (
-    <article className="carte-fornil flex flex-col rounded-2xl border-2 bg-card p-4 shadow-sm">
-      <header className="flex items-baseline justify-between gap-3">
-        <h3 className="text-2xl font-bold">{destination.nom}</h3>
-        {destination.livraison && destination.commandes[0]?.point_de_vente && (
-          <span className="text-sm text-muted-foreground">via {destination.commandes[0].point_de_vente.nom}</span>
-        )}
-      </header>
-      <ul className="my-4 flex-1 space-y-1.5">
-        {produits.map((p) => (
-          <li key={p.produit_id} className="flex items-baseline gap-3">
-            <span className="min-w-16 text-right text-3xl font-black tabular-nums leading-none">
-              {formatQuantite(p.quantite)}
-            </span>
-            <span className="text-xl font-medium leading-tight">
-              {p.nom}
-              {p.unite !== "pièce" && (
-                <span className="text-base text-muted-foreground"> {formatUnite(p.unite, p.quantite)}</span>
-              )}
-            </span>
-          </li>
-        ))}
-      </ul>
-      {notes.length > 0 && (
-        <ul className="mb-4 space-y-1 rounded-lg bg-amber-100/70 px-3 py-2 text-base text-amber-950 dark:bg-amber-500/15 dark:text-amber-100">
-          {notes.map((c) => (
-            <li key={c.id} className="italic">
-              {c.notes}
-              {!destination.livraison && c.client && <span className="not-italic opacity-70"> — {c.client.nom}</span>}
-            </li>
-          ))}
-        </ul>
-      )}
-      <Button
-        onClick={() => void valider()}
-        disabled={enCours}
-        className="h-16 w-full rounded-xl bg-emerald-600 text-xl font-bold text-white hover:bg-emerald-700 print:hidden"
-      >
-        {enCours ? <Loader2Icon className="size-6 animate-spin" /> : <CheckIcon className="size-7 stroke-[3]" />}
-        {destination.nom} prêt
-      </Button>
-    </article>
-  )
-}
-
-/** Onglet « Habituelles » : ce que chaque boutique / client reçoit chaque semaine. */
-function OngletHabituelles({
-  produits,
-  jourMisEnAvant,
-}: {
-  produits: Props["produits"]
-  jourMisEnAvant: number
-}) {
-  const [liste, setListe] = useState<CommandeRecurrenteDetail[] | null>(null)
-  const parId = useMemo(() => new Map(produits.map((p) => [p.id, p])), [produits])
-
-  const charger = useCallback(async () => {
-    const { data } = await createClient()
-      .from("commandes_recurrentes")
-      .select("*, client:clients(id, nom, type), point_de_vente:points_de_vente(id, nom)")
-      .eq("actif", true)
-    setListe((data ?? []) as CommandeRecurrenteDetail[])
-  }, [])
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void charger()
-  }, [charger])
-  useRealtime(["commandes_recurrentes"], charger)
-
-  if (liste === null) {
-    return (
-      <div className="flex justify-center py-20">
-        <Loader2Icon className="size-10 animate-spin text-muted-foreground" />
-      </div>
-    )
-  }
-  if (liste.length === 0) {
-    return <p className="py-20 text-center text-2xl text-muted-foreground">Aucune commande habituelle.</p>
-  }
-
-  // Le jour affiché d'abord, puis la suite de la semaine.
-  const jours = [0, 1, 2, 3, 4, 5, 6].map((i) => ((jourMisEnAvant - 1 + i) % 7) + 1)
-
-  return (
-    <div className="mx-auto max-w-5xl space-y-6">
-      {jours.map((j) => {
-        const duJour = liste.filter((h) => h.jour_semaine === j)
-        if (duJour.length === 0) return null
-        return (
-          <section key={j} className="space-y-2">
-            <h2 className="text-2xl font-bold">
-              Chaque {NOMS_JOURS_SEMAINE[j]}
-              {j === jourMisEnAvant && <span className="ml-2 text-base font-normal text-muted-foreground">(jour affiché)</span>}
-            </h2>
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {duJour.map((h) => (
-                <article key={h.id} className="rounded-2xl border bg-card p-4">
-                  <h3 className="text-xl font-semibold">{h.client?.nom ?? h.point_de_vente?.nom}</h3>
-                  {h.client && h.client.type !== "point_de_vente" && h.point_de_vente && (
-                    <p className="text-sm text-muted-foreground">via {h.point_de_vente.nom}</p>
-                  )}
-                  <ul className="mt-2 space-y-0.5 text-lg">
-                    {[...h.lignes]
-                      .sort((a, b) => (parId.get(a.produit_id)?.ordre ?? 0) - (parId.get(b.produit_id)?.ordre ?? 0))
-                      .map((l) => (
-                      <li key={l.produit_id}>
-                        <strong className="tabular-nums">{formatQuantite(l.quantite)}</strong>{" "}
-                        {parId.get(l.produit_id)?.nom ?? "Produit"}
-                      </li>
-                      ))}
-                  </ul>
-                </article>
-              ))}
-            </div>
-          </section>
-        )
-      })}
-    </div>
   )
 }

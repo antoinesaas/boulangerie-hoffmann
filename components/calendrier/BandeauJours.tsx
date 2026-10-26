@@ -39,6 +39,74 @@ export function BandeauJours({ jour, surChoix, enAttente, pointDeVenteId, grand,
   const jours = useMemo(() => joursEntre(ref, ajouterJours(ref, NB_JOURS_BANDEAU - 1)), [ref])
   const horsBandeau = !jours.includes(jour)
 
+  const dialogue = (
+    <Dialog open={calendrier} onOpenChange={setCalendrier}>
+      <DialogContent className="sm:max-w-md">
+        {calendrier && (
+          <CalendrierMois
+            selection={jour}
+            reference={ref}
+            pointDeVenteId={pointDeVenteId}
+            surChoix={(j) => {
+              surChoix(j)
+              setCalendrier(false)
+            }}
+          />
+        )}
+      </DialogContent>
+    </Dialog>
+  )
+
+  // Version compacte (téléphone) : les 7 jours + le calendrier tiennent sur une ligne, sans défilement.
+  if (!grand) {
+    return (
+      <div className={cn("grid grid-cols-8 gap-1", className)} role="tablist">
+        {jours.map((j) => {
+          const n = enAttente(j)
+          const actif = j === jour
+          return (
+            <button
+              key={j}
+              role="tab"
+              aria-selected={actif}
+              aria-label={`${formatJourSemaine(j)} ${formatJourMoisCourt(j)}${n ? `, ${n} en attente` : ""}`}
+              onClick={() => surChoix(j)}
+              className={cn(
+                "relative flex min-h-14 min-w-0 flex-col items-center justify-center rounded-lg border-2 transition-colors",
+                actif ? "border-primary bg-primary text-primary-foreground" : "border-transparent bg-muted text-foreground",
+              )}
+            >
+              <span className="text-[11px] font-medium uppercase leading-none">{formatJourSemaine(j).slice(0, 3)}</span>
+              <span className="text-lg font-bold tabular-nums leading-tight">{Number(j.slice(8))}</span>
+              {n > 0 && (
+                <span
+                  className={cn(
+                    "absolute -right-1 -top-1 min-w-4 rounded-full px-1 text-[10px] font-bold leading-4 tabular-nums",
+                    actif ? "bg-amber-300 text-amber-950" : "bg-amber-400 text-amber-950",
+                  )}
+                >
+                  {n}
+                </span>
+              )}
+            </button>
+          )
+        })}
+        <button
+          onClick={() => setCalendrier(true)}
+          aria-label={horsBandeau ? `Calendrier, ${formatJourSemaine(jour)} ${formatJourMoisCourt(jour)} choisi` : "Calendrier"}
+          className={cn(
+            "flex min-h-14 min-w-0 flex-col items-center justify-center rounded-lg border-2 transition-colors",
+            horsBandeau ? "border-primary bg-primary text-primary-foreground" : "border-dashed bg-background",
+          )}
+        >
+          <CalendarDaysIcon className="size-5" />
+          {horsBandeau && <span className="text-[10px] font-semibold leading-none">{jour.slice(8)}/{jour.slice(5, 7)}</span>}
+        </button>
+        {dialogue}
+      </div>
+    )
+  }
+
   return (
     <div className={cn("flex gap-2 overflow-x-auto pb-1 [scrollbar-width:thin]", className)} role="tablist">
       {jours.map((j) => {
@@ -51,16 +119,13 @@ export function BandeauJours({ jour, surChoix, enAttente, pointDeVenteId, grand,
             aria-selected={actif}
             onClick={() => surChoix(j)}
             className={cn(
-              "flex shrink-0 flex-col items-center justify-center rounded-xl border-2 px-3 transition-colors",
-              grand ? "min-h-16 min-w-28 flex-1" : "min-h-14 min-w-[5.5rem]",
+              "flex min-h-16 min-w-28 flex-1 shrink-0 flex-col items-center justify-center rounded-xl border-2 px-3 transition-colors",
               actif
                 ? "border-primary bg-primary text-primary-foreground"
                 : "border-transparent bg-muted text-foreground hover:bg-muted/70",
             )}
           >
-            <span className={cn("font-semibold leading-tight", grand ? "text-lg" : "text-sm")}>
-              {formatJourSemaine(j)}
-            </span>
+            <span className="text-lg font-semibold leading-tight">{formatJourSemaine(j)}</span>
             <span className={cn("text-xs", actif ? "opacity-80" : "text-muted-foreground")}>
               {j === ref ? "aujourd'hui" : formatJourMoisCourt(j)}
             </span>
@@ -80,32 +145,16 @@ export function BandeauJours({ jour, surChoix, enAttente, pointDeVenteId, grand,
       <button
         onClick={() => setCalendrier(true)}
         className={cn(
-          "flex shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border-2 px-3 transition-colors",
-          grand ? "min-h-16 min-w-28" : "min-h-14 min-w-[5.5rem]",
+          "flex min-h-16 min-w-28 shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border-2 px-3 transition-colors",
           horsBandeau ? "border-primary bg-primary text-primary-foreground" : "border-dashed bg-background hover:bg-muted",
         )}
       >
         <CalendarDaysIcon className="size-5" />
-        <span className={cn("font-semibold leading-tight", grand ? "text-base" : "text-sm")}>
+        <span className="text-base font-semibold leading-tight">
           {horsBandeau ? `${formatJourSemaine(jour).slice(0, 3)}. ${formatJourMoisCourt(jour)}` : "Calendrier"}
         </span>
       </button>
-
-      <Dialog open={calendrier} onOpenChange={setCalendrier}>
-        <DialogContent className="sm:max-w-md">
-          {calendrier && (
-            <CalendrierMois
-              selection={jour}
-              reference={ref}
-              pointDeVenteId={pointDeVenteId}
-              surChoix={(j) => {
-                surChoix(j)
-                setCalendrier(false)
-              }}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+      {dialogue}
     </div>
   )
 }

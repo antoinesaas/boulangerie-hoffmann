@@ -184,3 +184,15 @@
   --viz-hausse: #0ca30c;
   --viz-baisse: #e66767;
 }
+
+/* Champ date natif : sur iPhone (Safari) il ignore la largeur et déborde de son cadre */
+input[type="date"] {
+  -webkit-appearance: none;
+  appearance: none;
+  min-width: 0;
+  max-width: 100%;
+  display: block;
+}
+input[type="date"]::-webkit-date-and-time-value {
+  text-align: left;
+}
