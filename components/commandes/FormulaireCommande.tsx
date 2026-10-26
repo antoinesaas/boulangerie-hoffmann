@@ -235,15 +235,26 @@ export function FormulaireCommande({ produits, clients, pointsDeVente, pointDeVe
             </button>
           ))}
         </div>
-        <input
-          id="date-livraison"
-          type="date"
-          value={date}
-          min={aujourdhui()}
-          onChange={(e) => e.target.value && setDate(e.target.value)}
-          className="champ-date h-12 w-full min-w-0 rounded-lg border bg-transparent px-3 text-base"
-        />
-        <p className="mt-1 text-sm text-muted-foreground first-letter:uppercase">{formatDate(date)}</p>
+        {/* Le champ date natif (mal aligné sur iPhone) est invisible par-dessus un affichage maîtrisé ;
+            le toucher ouvre toujours le sélecteur de date du téléphone. */}
+        <div className="relative flex h-12 items-center justify-between gap-2 rounded-lg border px-3 focus-within:ring-2 focus-within:ring-ring">
+          <span className="truncate text-base font-medium first-letter:uppercase">{formatDate(date)}</span>
+          <CalendarIcon className="size-5 shrink-0 text-muted-foreground" />
+          <input
+            id="date-livraison"
+            type="date"
+            value={date}
+            min={aujourdhui()}
+            onChange={(e) => e.target.value && setDate(e.target.value)}
+            onClick={(e) => {
+              try {
+                e.currentTarget.showPicker?.()
+              } catch {}
+            }}
+            className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+            aria-label={`Date de livraison : ${formatDate(date)}`}
+          />
+        </div>
 
         <div className="mt-3 rounded-lg border p-3">
           <label className="flex min-h-11 cursor-pointer items-center justify-between gap-3">
