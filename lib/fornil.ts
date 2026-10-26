@@ -87,19 +87,51 @@ export function sommeProduits(commandes: CommandeDetail[]): LigneProduit[] {
   return [...parProduit.values()].sort((a, b) => a.ordre - b.ordre || a.nom.localeCompare(b.nom, "fr"))
 }
 
-/**
- * Décompte de production du jour. Un produit est fait à hauteur du plus grand de :
- * ce que le fornil a pointé « fait », ou ce qui est déjà parti dans des commandes préparées/livrées.
- */
-export function aProduire(commandes: CommandeDetail[], pointees: Map<string, number>): LigneAProduire[] {
-  const actives = commandes.filter((c) => c.statut !== "annulee")
-  const parties = sommeProduits(actives.filter((c) => c.statut === "preparee" || c.statut === "livree"))
-  const dejaParti = new Map(parties.map((p) => [p.produit_id, p.quantite]))
+/** Clé d'une quantité pointée : une destination et un produit. */
+export function cleProduction(destination: string, produitId: string): string {
+  return `${destination}|${produitId}`
+}
 
-  return sommeProduits(actives).map((p) => {
-    const faite = Math.min(p.quantite, Math.max(pointees.get(p.produit_id) ?? 0, dejaParti.get(p.produit_id) ?? 0))
-    return { ...p, total: p.quantite, faite, reste: arrondi(p.quantite - faite) }
+export interface ProductionDestination {
+  destination: Destination
+  /** Une ligne par produit à envoyer à cette destination (commandes + habituelle). */
+  lignes: LigneAProduire[]
+}
+
+/**
+ * Décompte par destination. Un produit est fait, pour une destination, à hauteur du plus grand de :
+ * ce que le fornil a validé pour elle, ou ce qui est déjà parti dans ses commandes préparées/livrées.
+ */
+export function productionParDestination(
+  destinations: Destination[],
+  pointees: Map<string, number>,
+): ProductionDestination[] {
+  return destinations.map((d) => {
+    const parties = sommeProduits(d.commandes.filter((c) => c.statut === "preparee" || c.statut === "livree"))
+    const dejaParti = new Map(parties.map((p) => [p.produit_id, p.quantite]))
+    const lignes = sommeProduits(d.commandes).map((p) => {
+      const pointe = pointees.get(cleProduction(d.cle, p.produit_id)) ?? 0
+      const faite = Math.min(p.quantite, Math.max(pointe, dejaParti.get(p.produit_id) ?? 0))
+      return { ...p, total: p.quantite, faite, reste: arrondi(p.quantite - faite) }
+    })
+    return { destination: d, lignes }
   })
+}
+
+/** Total général par produit (toutes destinations) : ce qu'il reste à produire sur ce qui est commandé. */
+export function recapProduction(par: ProductionDestination[]): LigneAProduire[] {
+  const parProduit = new Map<string, LigneAProduire>()
+  for (const { lignes } of par) {
+    for (const l of lignes) {
+      const r = parProduit.get(l.produit_id) ?? { ...l, quantite: 0, total: 0, faite: 0, reste: 0 }
+      r.total = arrondi(r.total + l.total)
+      r.quantite = r.total
+      r.faite = arrondi(r.faite + l.faite)
+      r.reste = arrondi(r.reste + l.reste)
+      parProduit.set(l.produit_id, r)
+    }
+  }
+  return [...parProduit.values()].sort((a, b) => a.ordre - b.ordre || a.nom.localeCompare(b.nom, "fr"))
 }
 
 /** Commandes d'une destination encore à préparer. */

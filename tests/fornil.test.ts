@@ -2,7 +2,14 @@
 // Lancer : npm test
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import { aPreparer, aProduire, grouperParDestination, sommeProduits } from "../lib/fornil.ts"
+import {
+  aPreparer,
+  cleProduction,
+  grouperParDestination,
+  productionParDestination,
+  recapProduction,
+  sommeProduits,
+} from "../lib/fornil.ts"
 import type { CommandeDetail, StatutCommande, TypeClient } from "../types/index.ts"
 
 const BOUTIQUES = [
@@ -103,40 +110,53 @@ describe("Envois par destination", () => {
   })
 })
 
-describe("Décompte « À produire »", () => {
-  it("additionne toutes les destinations : 141 trad, 40 croissants, 5 campagnes", () => {
-    const l = aProduire(journee(), new Map())
-    assert.deepEqual(
-      l.map((x) => [x.nom, x.reste]),
-      [
-        ["Baguette tradition", 141],
-        ["Pain de campagne", 5],
-        ["Croissant", 40],
-      ],
-    )
+function production(cmds: CommandeDetail[], pointees = new Map<string, number>()) {
+  const par = productionParDestination(grouperParDestination(cmds, BOUTIQUES), pointees)
+  const reste = (dest: string, produit: string) =>
+    par.find((p) => p.destination.nom === dest)?.lignes.find((l) => l.nom === produit)?.reste
+  const total = (produit: string) => recapProduction(par).find((l) => l.nom === produit)
+  return { par, reste, total }
+}
+
+describe("Décompte « À produire » par magasin", () => {
+  it("chaque magasin a son total, commandes et habituelle confondues (Coffret : 91 trads)", () => {
+    const { reste } = production(journee())
+    assert.equal(reste("Coffret", "Baguette tradition"), 91)
+    assert.equal(reste("Coffret", "Croissant"), 40)
+    assert.equal(reste("Merveille", "Baguette tradition"), 30)
+    assert.equal(reste("Armée", "Baguette tradition"), 20)
   })
 
-  it("baisse quand le fornil pointe une partie faite", () => {
-    const l = aProduire(journee(), new Map([["p-trad", 100]]))
-    assert.equal(l.find((x) => x.nom === "Baguette tradition")!.reste, 41)
+  it("le bandeau total additionne tous les magasins : 141 trads, 40 croissants, 5 campagnes", () => {
+    const { total } = production(journee())
+    assert.equal(total("Baguette tradition")!.reste, 141)
+    assert.equal(total("Croissant")!.reste, 40)
+    assert.equal(total("Pain de campagne")!.reste, 5)
   })
 
-  it("un envoi prêt compte comme produit, même sans pointage", () => {
+  it("valider « 91 baguettes finies » pour Coffret ne touche pas Merveille, et baisse le total", () => {
+    const pointees = new Map([[cleProduction("pdv-coffret", "p-trad"), 91]])
+    const { reste, total } = production(journee(), pointees)
+    assert.equal(reste("Coffret", "Baguette tradition"), 0)
+    assert.equal(reste("Merveille", "Baguette tradition"), 30)
+    assert.equal(total("Baguette tradition")!.reste, 50)
+  })
+
+  it("une commande déjà préparée compte comme produite pour son magasin", () => {
     const cmds = journee().map((c) => (c.client?.nom === "Merveille" ? { ...c, statut: "preparee" as const } : c))
-    const l = aProduire(cmds, new Map())
-    assert.equal(l.find((x) => x.nom === "Pain de campagne")!.reste, 0)
-    assert.equal(l.find((x) => x.nom === "Baguette tradition")!.reste, 111)
+    const { reste } = production(cmds)
+    assert.equal(reste("Merveille", "Pain de campagne"), 0)
+    assert.equal(reste("Coffret", "Baguette tradition"), 91)
   })
 
-  it("un produit terminé disparaît, puis revient seulement pour une nouvelle commande", () => {
-    const pointees = new Map([["p-trad", 141]])
-    assert.equal(aProduire(journee(), pointees).find((x) => x.nom === "Baguette tradition")!.reste, 0)
-    const plusTard = [...journee(), commande({ nom: "M. Durand", type: "occasionnel" }, "pdv-merveille", [["trad", 2]])]
-    assert.equal(aProduire(plusTard, pointees).find((x) => x.nom === "Baguette tradition")!.reste, 2)
+  it("une commande arrivée après la validation ne fait réapparaître que la différence", () => {
+    const pointees = new Map([[cleProduction("pdv-coffret", "p-trad"), 91]])
+    const plusTard = [...journee(), commande({ nom: "M. Durand", type: "occasionnel" }, "pdv-coffret", [["trad", 2]])]
+    assert.equal(production(plusTard, pointees).reste("Coffret", "Baguette tradition"), 2)
   })
 
   it("ne descend jamais sous zéro", () => {
-    const l = aProduire(journee(), new Map([["p-trad", 500]]))
-    assert.equal(l.find((x) => x.nom === "Baguette tradition")!.reste, 0)
+    const pointees = new Map([[cleProduction("pdv-coffret", "p-trad"), 500]])
+    assert.equal(production(journee(), pointees).reste("Coffret", "Baguette tradition"), 0)
   })
 })

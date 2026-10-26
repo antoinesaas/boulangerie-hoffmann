@@ -20,7 +20,16 @@ import { MenuUtilisateur } from "@/components/layout/MenuUtilisateur"
 import { BoutonTheme } from "@/components/ThemeProvider"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { aPreparer, aProduire, grouperParDestination, sommeProduits, type Destination, type LigneAProduire } from "@/lib/fornil"
+import {
+  aPreparer,
+  grouperParDestination,
+  productionParDestination,
+  recapProduction,
+  sommeProduits,
+  type Destination,
+  type LigneAProduire,
+  type ProductionDestination,
+} from "@/lib/fornil"
 import { changerStatut, useCommandes } from "@/lib/hooks/useCommandes"
 import { useProduction } from "@/lib/hooks/useProduction"
 import { useRealtime } from "@/lib/hooks/useRealtime"
@@ -75,8 +84,9 @@ export function VueFornil({ pointsDeVente, produits, utilisateur }: Props) {
   useAlerteNouvellesCommandes(commandes, chargement, plageChargee, son.jouer)
 
   const duJour = useMemo(() => commandes.filter((c) => c.date_livraison === jourActif), [commandes, jourActif])
-  const lignesProduction = useMemo(() => aProduire(duJour, pointees), [duJour, pointees])
   const destinations = useMemo(() => grouperParDestination(duJour, pointsDeVente), [duJour, pointsDeVente])
+  const production = useMemo(() => productionParDestination(destinations, pointees), [destinations, pointees])
+  const lignesProduction = useMemo(() => recapProduction(production), [production])
 
   const resteProduits = lignesProduction.filter((l) => l.reste > 0)
   const destinationsAPreparer = destinations.filter((d) => aPreparer(d).length > 0)
@@ -187,7 +197,7 @@ export function VueFornil({ pointsDeVente, produits, utilisateur }: Props) {
         ) : duJour.length === 0 ? (
           <p className="py-20 text-center text-2xl text-muted-foreground">Aucune commande pour ce jour.</p>
         ) : onglet === "produire" ? (
-          <OngletProduire lignes={lignesProduction} pointer={pointer} />
+          <OngletProduire recap={lignesProduction} production={production} pointer={pointer} marquer={marquer} />
         ) : (
           <OngletEnvois destinations={destinations} marquer={marquer} />
         )}
@@ -225,97 +235,84 @@ function useAlerteNouvellesCommandes(
   }, [commandes, chargement, plage, jouer])
 }
 
-/** Onglet « À produire » : une ligne par produit, le décompte, un bouton « Fait ». */
-function OngletProduire({
-  lignes,
-  pointer,
-}: {
-  lignes: LigneAProduire[]
-  pointer: (produitId: string, quantite: number) => Promise<unknown>
-}) {
-  const [voirFaits, setVoirFaits] = useState(false)
-  const [partiel, setPartiel] = useState<LigneAProduire | null>(null)
-  const restants = lignes.filter((l) => l.reste > 0)
-  const faits = lignes.filter((l) => l.reste <= 0)
+type Pointer = (destination: string, produitId: string, quantite: number) => Promise<unknown>
+type Marquer = (ids: string[], statut: StatutCommande) => Promise<boolean>
 
-  function toutFait(l: LigneAProduire) {
-    void pointer(l.produit_id, l.total)
-    toast.success(`${l.nom} : fait`, {
-      action: { label: "Annuler", onClick: () => void pointer(l.produit_id, l.faite) },
-    })
+/**
+ * Onglet « À produire » : en haut le bandeau du total restant (tous magasins),
+ * puis une carte par magasin / client livré avec ses quantités et un bouton « Fini » par produit.
+ */
+function OngletProduire({
+  recap,
+  production,
+  pointer,
+  marquer,
+}: {
+  recap: LigneAProduire[]
+  production: ProductionDestination[]
+  pointer: Pointer
+  marquer: Marquer
+}) {
+  const [partiel, setPartiel] = useState<{ destination: Destination; ligne: LigneAProduire } | null>(null)
+  const boutiques = production.filter((p) => !p.destination.livraison)
+  const livraisons = production.filter((p) => p.destination.livraison)
+
+  /** Valide une ligne ; si c'était la dernière du magasin, l'envoi passe « prêt » tout seul. */
+  async function valider(p: ProductionDestination, l: LigneAProduire, quantite: number) {
+    const avant = l.faite
+    await pointer(p.destination.cle, l.produit_id, quantite)
+    const finiAussi = quantite >= l.total && p.lignes.every((x) => x.produit_id === l.produit_id || x.reste <= 0)
+    const ids = finiAussi ? aPreparer(p.destination).map((c) => c.id) : []
+    if (ids.length) await marquer(ids, "preparee")
+    toast.success(
+      finiAussi ? `${p.destination.nom} : tout est prêt` : `${p.destination.nom} : ${formatQuantite(quantite - avant)} ${l.nom}`,
+      {
+        action: {
+          label: "Annuler",
+          onClick: () => {
+            void pointer(p.destination.cle, l.produit_id, avant)
+            if (ids.length) void marquer(ids, "en_attente")
+          },
+        },
+      },
+    )
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-3">
-      {restants.length === 0 ? (
-        <div className="rounded-2xl border-2 border-emerald-500/40 bg-emerald-50 p-8 text-center text-2xl font-semibold text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100">
-          <CheckIcon className="mx-auto mb-2 size-10" /> Tout est produit pour ce jour.
-        </div>
-      ) : (
-        <ul className="space-y-3">
-          {restants.map((l) => (
-            <li
-              key={l.produit_id}
-              className="carte-fornil flex items-center gap-4 rounded-2xl border-2 bg-card p-4 shadow-sm"
-            >
-              <button
-                onClick={() => setPartiel(l)}
-                className="min-w-28 text-right text-5xl font-black tabular-nums leading-none"
-                aria-label={`${formatQuantite(l.reste)} ${l.nom} à faire. Indiquer une partie faite`}
-              >
-                {formatQuantite(l.reste)}
-              </button>
-              <div className="min-w-0 flex-1">
-                <div className="text-2xl font-semibold leading-tight">{l.nom}</div>
-                <div className="text-base text-muted-foreground">
-                  {l.unite !== "pièce" ? `${formatUnite(l.unite, l.reste)} · ` : ""}
-                  {l.faite > 0
-                    ? `${formatQuantite(l.faite)} déjà faits sur ${formatQuantite(l.total)}`
-                    : `sur ${formatQuantite(l.total)} commandés`}
-                </div>
-              </div>
-              <Button
-                onClick={() => toutFait(l)}
-                className="h-16 shrink-0 rounded-xl bg-emerald-600 px-6 text-xl font-bold text-white hover:bg-emerald-700 print:hidden"
-              >
-                <CheckIcon className="size-7 stroke-[3]" /> Fait
-              </Button>
-            </li>
-          ))}
-        </ul>
-      )}
+    <div className="space-y-6">
+      <BandeauTotal recap={recap} />
 
-      {faits.length > 0 && (
-        <div className="pt-2 print:hidden">
-          <button
-            onClick={() => setVoirFaits((v) => !v)}
-            className="min-h-11 text-base text-muted-foreground underline underline-offset-4"
-          >
-            {voirFaits ? "Masquer" : "Afficher"} les produits terminés ({faits.length})
-          </button>
-          {voirFaits && (
-            <ul className="mt-2 space-y-2">
-              {faits.map((l) => (
-                <li key={l.produit_id} className="flex items-center gap-3 rounded-xl bg-muted/60 px-4 py-2 text-lg">
-                  <CheckIcon className="size-5 text-emerald-600" />
-                  <span className="flex-1">
-                    {formatQuantite(l.total)} {l.nom}
-                  </span>
-                  <Button variant="ghost" onClick={() => void pointer(l.produit_id, 0)}>
-                    <Undo2Icon /> Remettre
-                  </Button>
-                </li>
+      {[
+        { titre: "Magasins", Icone: StoreIcon, liste: boutiques },
+        { titre: "Livraisons", Icone: TruckIcon, liste: livraisons },
+      ].map(({ titre, Icone, liste }) =>
+        liste.length === 0 ? null : (
+          <section key={titre} className="space-y-3">
+            <h2 className="flex items-center gap-2 text-2xl font-bold">
+              <Icone className="size-6" /> {titre}
+            </h2>
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 print:block print:space-y-3">
+              {liste.map((p) => (
+                <CarteProduction
+                  key={p.destination.cle}
+                  production={p}
+                  surFini={(l) => void valider(p, l, l.total)}
+                  surPartiel={(l) => setPartiel({ destination: p.destination, ligne: l })}
+                  surRemettre={(l) => void pointer(p.destination.cle, l.produit_id, 0)}
+                />
               ))}
-            </ul>
-          )}
-        </div>
+            </div>
+          </section>
+        ),
       )}
 
       <DialogPartiel
-        ligne={partiel}
+        ligne={partiel?.ligne ?? null}
+        titre={partiel ? `${partiel.ligne.nom} — ${partiel.destination.nom}` : ""}
         surFermer={() => setPartiel(null)}
         surValider={(n) => {
-          if (partiel) void pointer(partiel.produit_id, partiel.faite + n)
+          const p = production.find((x) => x.destination.cle === partiel?.destination.cle)
+          if (p && partiel) void valider(p, partiel.ligne, Math.min(partiel.ligne.total, partiel.ligne.faite + n))
           setPartiel(null)
         }}
       />
@@ -323,13 +320,147 @@ function OngletProduire({
   )
 }
 
+/** Bandeau du haut : ce qu'il reste à produire au total, tous magasins confondus. */
+function BandeauTotal({ recap }: { recap: LigneAProduire[] }) {
+  const restant = recap.filter((l) => l.reste > 0)
+  if (restant.length === 0) {
+    return (
+      <div className="rounded-2xl border-2 border-emerald-500/40 bg-emerald-50 p-6 text-center text-2xl font-semibold text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100">
+        <CheckIcon className="mx-auto mb-2 size-9" /> Tout est produit pour ce jour.
+      </div>
+    )
+  }
+  return (
+    <section className="rounded-2xl border-2 bg-card p-4 print:break-after-page">
+      <h2 className="mb-3 text-lg font-bold uppercase tracking-wide text-muted-foreground">
+        Reste à produire — total (reste / commandé)
+      </h2>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        {recap.map((l) => (
+          <div key={l.produit_id} className={cn("rounded-xl bg-muted/60 p-3", l.reste <= 0 && "opacity-40")}>
+            <div className="text-4xl font-black tabular-nums leading-none">
+              {l.reste <= 0 ? <CheckIcon className="inline size-8 text-emerald-600" /> : formatQuantite(l.reste)}
+              <span className="text-lg font-semibold text-muted-foreground"> / {formatQuantite(l.total)}</span>
+            </div>
+            <div className="mt-1 text-base font-medium leading-tight">
+              {l.nom}
+              {l.unite !== "pièce" && <span className="text-muted-foreground"> ({formatUnite(l.unite)})</span>}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+/** Carte d'un magasin : quantités à produire pour lui (commandes + habituelle), validables ligne par ligne. */
+function CarteProduction({
+  production,
+  surFini,
+  surPartiel,
+  surRemettre,
+}: {
+  production: ProductionDestination
+  surFini: (l: LigneAProduire) => void
+  surPartiel: (l: LigneAProduire) => void
+  surRemettre: (l: LigneAProduire) => void
+}) {
+  const { destination, lignes } = production
+  const restantes = lignes.filter((l) => l.reste > 0)
+  const finies = lignes.filter((l) => l.reste <= 0)
+  const notes = aPreparer(destination).filter((c) => c.notes)
+
+  if (restantes.length === 0) {
+    return (
+      <article className="flex items-center gap-3 rounded-2xl border-2 border-emerald-500/40 bg-emerald-50/60 p-4 dark:bg-emerald-950/30 print:hidden">
+        <CheckIcon className="size-7 shrink-0 text-emerald-600" />
+        <div className="min-w-0 flex-1">
+          <div className="text-xl font-semibold">{destination.nom} · tout est prêt</div>
+          <div className="truncate text-sm text-muted-foreground">
+            {finies.map((l) => `${formatQuantite(l.total)} ${l.nom}`).join(" · ")}
+          </div>
+        </div>
+      </article>
+    )
+  }
+
+  return (
+    <article className="carte-fornil flex flex-col rounded-2xl border-2 bg-card p-4 shadow-sm">
+      <header className="mb-2 flex items-baseline justify-between gap-3">
+        <h3 className="text-2xl font-bold">{destination.nom}</h3>
+        {destination.livraison && destination.commandes[0]?.point_de_vente && (
+          <span className="text-sm text-muted-foreground">via {destination.commandes[0].point_de_vente.nom}</span>
+        )}
+      </header>
+
+      <ul className="divide-y">
+        {restantes.map((l) => (
+          <li key={l.produit_id} className="flex items-center gap-3 py-2">
+            <button
+              onClick={() => surPartiel(l)}
+              className="min-w-16 text-right text-4xl font-black tabular-nums leading-none"
+              aria-label={`${formatQuantite(l.reste)} ${l.nom} à faire pour ${destination.nom}. Indiquer une partie faite`}
+            >
+              {formatQuantite(l.reste)}
+            </button>
+            <div className="min-w-0 flex-1">
+              <div className="text-xl font-semibold leading-tight">{l.nom}</div>
+              {l.faite > 0 && (
+                <div className="text-sm text-muted-foreground">
+                  {formatQuantite(l.faite)} déjà faits sur {formatQuantite(l.total)}
+                </div>
+              )}
+            </div>
+            <Button
+              onClick={() => surFini(l)}
+              className="h-14 shrink-0 rounded-xl bg-emerald-600 px-4 text-lg font-bold text-white hover:bg-emerald-700 print:hidden"
+              aria-label={`${l.nom} fini pour ${destination.nom}`}
+            >
+              <CheckIcon className="size-6 stroke-[3]" /> Fini
+            </Button>
+          </li>
+        ))}
+      </ul>
+
+      {notes.length > 0 && (
+        <ul className="mt-3 space-y-1 rounded-lg bg-amber-100/70 px-3 py-2 text-base text-amber-950 dark:bg-amber-500/15 dark:text-amber-100">
+          {notes.map((c) => (
+            <li key={c.id} className="italic">
+              {c.notes}
+              {!destination.livraison && c.client && <span className="not-italic opacity-70"> — {c.client.nom}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {finies.length > 0 && (
+        <p className="mt-3 flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground print:hidden">
+          <CheckIcon className="size-4 text-emerald-600" /> Fini :
+          {finies.map((l) => (
+            <button
+              key={l.produit_id}
+              onClick={() => surRemettre(l)}
+              className="underline decoration-dotted underline-offset-4"
+              title="Remettre à faire"
+            >
+              {formatQuantite(l.total)} {l.nom}
+            </button>
+          ))}
+        </p>
+      )}
+    </article>
+  )
+}
+
 /** « J'en ai fait X » : avance le décompte d'une partie seulement. */
 function DialogPartiel({
   ligne,
+  titre,
   surFermer,
   surValider,
 }: {
   ligne: LigneAProduire | null
+  titre?: string
   surFermer: () => void
   surValider: (quantite: number) => void
 }) {
@@ -349,7 +480,7 @@ function DialogPartiel({
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-2xl">{ligne?.nom}</DialogTitle>
+          <DialogTitle className="text-2xl">{titre || ligne?.nom}</DialogTitle>
         </DialogHeader>
         <p className="text-lg">
           Reste <strong>{ligne ? formatQuantite(ligne.reste) : ""}</strong> à faire. Combien viennent d&apos;être faits ?

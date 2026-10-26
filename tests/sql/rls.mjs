@@ -22,7 +22,7 @@ alter default privileges in schema public grant all on sequences to anon, authen
 create publication supabase_realtime;
 `;
 await db.exec(stub);
-for (const f of ["20261024000001_schema.sql", "20261024000002_rls.sql", "20261024000003_vues_ca_agregees.sql", "20261024000004_index_clients.sql", "20261024000005_appareils.sql", "20261026000006_habituelles_production.sql"]) {
+for (const f of ["20261024000001_schema.sql", "20261024000002_rls.sql", "20261024000003_vues_ca_agregees.sql", "20261024000004_index_clients.sql", "20261024000005_appareils.sql", "20261026000006_habituelles_production.sql", "20261026000007_production_par_destination.sql"]) {
   await db.exec(readFileSync(`${root}/supabase/migrations/${f}`, "utf8"));
   console.log("OK migration", f);
 }
@@ -179,8 +179,10 @@ await as("boulanger", `select generer_recurrences(current_date + 30)`);
 check("habitude arrêtée : plus de génération", (await db.query(`select count(*)::int n from commandes where recurrente_id=$1 and statut='en_attente'`, [rec])).rows[0].n === 0);
 await expect("appareil crée une habituelle pour Lermberg", () => as("appareil", `select creer_commande(gen_random_uuid(),$1,current_date+1,$2::jsonb,null,$3,'{7}'::smallint[])`, [cli["Lermberg"], lignes, pdv.Lermberg]));
 // --- Production ---
-await expect("boulanger note la production", () => as("boulanger", `insert into production_faite (date_production, produit_id, quantite) values (current_date, $1, 20) on conflict (date_production, produit_id) do update set quantite = excluded.quantite returning quantite`, [prod["Croissant"]]));
-await expect("appareil met à jour la production", () => as("appareil", `update production_faite set quantite = 25 where produit_id=$1 returning quantite`, [prod["Croissant"]]));
+await expect("boulanger note la production (Coffret)", () => as("boulanger", `insert into production_faite (date_production, destination, produit_id, quantite) values (current_date, $2, $1, 20) on conflict (date_production, destination, produit_id) do update set quantite = excluded.quantite returning quantite`, [prod["Croissant"], pdv.Coffret]));
+await expect("même produit, autre boutique : ligne séparée", () => as("boulanger", `insert into production_faite (date_production, destination, produit_id, quantite) values (current_date, $2, $1, 7) returning quantite`, [prod["Croissant"], pdv.Merveille]));
+check("2 lignes de production (une par boutique)", (await db.query(`select count(*)::int n from production_faite`)).rows[0].n === 2);
+await expect("appareil met à jour la production", () => as("appareil", `update production_faite set quantite = 25 where produit_id=$1 and destination=$2 returning quantite`, [prod["Croissant"], pdv.Coffret]));
 await expect("vendeur ne touche pas à la production", () => as("vendeur", `insert into production_faite (date_production, produit_id, quantite) values (current_date+1, $1, 1)`, [prod["Croissant"]]), true);
 await expect("vendeur crée un client tournée", () => as("vendeur", `insert into clients (nom, type) values ('Tournée test', 'tournee') returning type`));
 await expect("vendeur ne crée pas de client pro", () => as("vendeur", `insert into clients (nom, type) values ('Pro', 'professionnel')`), true);
