@@ -4,6 +4,7 @@ import { ChevronDownIcon, ChevronRightIcon, Loader2Icon, PlusCircleIcon, SearchI
 import Link from "next/link"
 import { Fragment, useState } from "react"
 import { toast } from "sonner"
+import { BandeauJours } from "@/components/calendrier/BandeauJours"
 import { PastilleTempsReel } from "@/components/ca/DashboardCA"
 import { EnTetePage } from "@/components/layout/EnTetePage"
 import { Button } from "@/components/ui/button"
@@ -32,13 +33,14 @@ import {
 } from "@/types"
 import { BadgeStatut } from "./BadgeStatut"
 
-type Preset = "aujourdhui" | "demain" | "a_venir" | "passe" | "perso"
+type Preset = "jour" | "a_venir" | "passe" | "perso"
 const STATUTS: StatutCommande[] = ["en_attente", "preparee", "livree", "annulee"]
 const num = "text-right tabular-nums"
 
 export function GestionCommandes({ pointsDeVente }: { pointsDeVente: Pick<PointDeVente, "id" | "nom">[] }) {
   const jour = aujourdhui()
-  const [preset, setPreset] = useState<Preset>("aujourdhui")
+  const [preset, setPreset] = useState<Preset>("jour")
+  const [jourChoisi, setJourChoisi] = useState(jour)
   const [persoDebut, setPersoDebut] = useState(jour)
   const [persoFin, setPersoFin] = useState(ajouterJours(jour, 7))
   const [pdv, setPdv] = useState("tous")
@@ -47,8 +49,7 @@ export function GestionCommandes({ pointsDeVente }: { pointsDeVente: Pick<PointD
   const [ouverte, setOuverte] = useState<string | null>(null)
 
   const bornes: Record<Preset, [string, string]> = {
-    aujourdhui: [jour, jour],
-    demain: [ajouterJours(jour, 1), ajouterJours(jour, 1)],
+    jour: [jourChoisi, jourChoisi],
     a_venir: [jour, ajouterJours(jour, 7)],
     passe: [ajouterJours(jour, -7), jour],
     perso: persoDebut <= persoFin ? [persoDebut, persoFin] : [persoFin, persoDebut],
@@ -116,8 +117,7 @@ export function GestionCommandes({ pointsDeVente }: { pointsDeVente: Pick<PointD
         <div className="flex flex-wrap gap-1 rounded-lg bg-muted p-1" role="radiogroup" aria-label="Période">
           {(
             [
-              ["aujourdhui", "Aujourd'hui"],
-              ["demain", "Demain"],
+              ["jour", "Par jour"],
               ["a_venir", "7 prochains jours"],
               ["passe", "7 derniers jours"],
               ["perso", "Personnalisée"],
@@ -192,6 +192,16 @@ export function GestionCommandes({ pointsDeVente }: { pointsDeVente: Pick<PointD
           />
         </div>
       </div>
+
+      {preset === "jour" && (
+        <BandeauJours
+          className="mb-4"
+          jour={jourChoisi}
+          surChoix={setJourChoisi}
+          enAttente={(j) => (j === jourChoisi ? commandes.filter((c) => c.statut === "en_attente").length : 0)}
+          pointDeVenteId={pdv === "tous" ? null : pdv}
+        />
+      )}
 
       <p className="mb-3 text-sm text-muted-foreground">
         {visibles.length} commande{visibles.length > 1 ? "s" : ""} · {formatPrix(totalHT)} HT ·{" "}

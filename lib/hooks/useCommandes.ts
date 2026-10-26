@@ -29,6 +29,8 @@ export function useCommandes(filtres: FiltresCommandes) {
 
   const charger = useCallback(async () => {
     const supabase = createClient()
+    // Crée à l'avance les commandes habituelles de la période (sans effet si déjà faites).
+    await supabase.rpc("generer_recurrences", { p_jusqu_au: dateFin })
     let requete = supabase
       .from("commandes")
       .select(SELECT_COMMANDE_DETAIL)

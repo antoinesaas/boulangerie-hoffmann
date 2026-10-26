@@ -9,6 +9,8 @@ export type StatutCommande = "en_attente" | "preparee" | "livree" | "annulee"
 export type TypeClientPro = "point_de_vente" | "tournee" | "marche" | "professionnel"
 export type TypeClientParticulier = "regulier" | "occasionnel"
 export type TypeClient = TypeClientPro | TypeClientParticulier
+/** Types qu'un vendeur peut créer à la volée. */
+export type TypeClientVendeur = TypeClientParticulier | "tournee"
 
 export type Unite = "pièce" | "kg" | "douzaine"
 export type Categorie = "pain" | "viennoiserie" | "pâtisserie" | "autre"
@@ -69,7 +71,28 @@ export interface Commande {
   prepare_le: string | null
   total_ht: number
   total_ttc: number
+  recurrente_id: string | null
 }
+
+/** Commande habituelle : répétée chaque semaine le même jour (1 = lundi … 7 = dimanche). */
+export interface CommandeRecurrente {
+  id: string
+  client_id: string
+  point_de_vente_id: string | null
+  jour_semaine: number
+  lignes: LignePayload[]
+  notes: string | null
+  date_debut: string
+  actif: boolean
+  created_at: string
+}
+
+export interface CommandeRecurrenteDetail extends CommandeRecurrente {
+  client: Pick<Client, "id" | "nom" | "type"> | null
+  point_de_vente: Pick<PointDeVente, "id" | "nom"> | null
+}
+
+export const NOMS_JOURS_SEMAINE = ["", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
 
 export interface LigneCommande {
   id: string
@@ -161,13 +184,15 @@ export interface CommandePayload {
   p_lignes: LignePayload[]
   p_notes: string | null
   p_point_de_vente_id: string | null
+  /** Jours de répétition (1 = lundi … 7 = dimanche) : commande habituelle. */
+  p_jours_semaine: number[] | null
 }
 
 export interface NouveauClientPayload {
   id: string
   nom: string
   telephone: string | null
-  type: TypeClientParticulier
+  type: TypeClientVendeur
 }
 
 export type OperationEnAttente =

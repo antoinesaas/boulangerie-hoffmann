@@ -139,3 +139,8 @@ export function ajouterMois(iso: string, mois: number): string {
   d.setUTCMonth(d.getUTCMonth() + mois)
   return versISO(d)
 }
+
+/** Jour ISO de la semaine : 1 = lundi … 7 = dimanche. */
+export function jourSemaineIso(iso: string): number {
+  return ((versDate(iso).getUTCDay() + 6) % 7) + 1
+}

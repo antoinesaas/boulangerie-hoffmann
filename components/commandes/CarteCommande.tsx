@@ -1,4 +1,4 @@
-import { ClockIcon, StoreIcon } from "lucide-react"
+import { ClockIcon, RepeatIcon, StoreIcon } from "lucide-react"
 import { cn, formatHeure, formatPrix, formatQuantite, formatUnite, libelleJour } from "@/lib/utils"
 import { LIBELLES_TYPE_CLIENT, type CommandeDetail } from "@/types"
 import { BadgeStatut } from "./BadgeStatut"
@@ -25,6 +25,11 @@ export function CarteCommande({ commande, actions, afficherDate, afficherPointDe
               <ClockIcon className="size-3" /> saisie {formatHeure(commande.cree_le)}
             </span>
             {afficherDate && <span>· {libelleJour(commande.date_livraison)}</span>}
+            {commande.recurrente_id && (
+              <span className="inline-flex items-center gap-1 font-medium text-foreground">
+                <RepeatIcon className="size-3" /> chaque semaine
+              </span>
+            )}
             {afficherPointDeVente && commande.point_de_vente && (
               <span className="inline-flex items-center gap-1">
                 <StoreIcon className="size-3" /> {commande.point_de_vente.nom}

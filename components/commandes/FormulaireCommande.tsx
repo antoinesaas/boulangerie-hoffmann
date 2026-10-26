@@ -1,6 +1,6 @@
 "use client"
 
-import { CalendarIcon, Loader2Icon, MinusIcon, PlusIcon, SendIcon, StoreIcon } from "lucide-react"
+import { CalendarIcon, Loader2Icon, MinusIcon, PlusIcon, RepeatIcon, SendIcon, StoreIcon } from "lucide-react"
 import { useMemo, useState } from "react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { useFileAttente } from "@/lib/hooks/useFileAttente"
 import { ajouterOperation, lireFile, synchroniser } from "@/lib/offline/fileAttente"
@@ -27,12 +28,14 @@ import {
   formatPrix,
   formatQuantite,
   formatUnite,
+  jourSemaineIso,
   totalLignes,
   uuid,
 } from "@/lib/utils"
 import {
   CATEGORIES,
   LIBELLES_CATEGORIE,
+  NOMS_JOURS_SEMAINE,
   type Client,
   type CommandePayload,
   type PointDeVente,
@@ -55,6 +58,22 @@ export function FormulaireCommande({ produits, clients, pointsDeVente, pointDeVe
   const [clientsLocaux, setClientsLocaux] = useState<Client[]>([])
   const [client, setClient] = useState<Client | null>(null)
   const [date, setDate] = useState(() => ajouterJours(aujourdhui(), 1))
+  // Commande habituelle : répétée chaque semaine les jours cochés (1 = lundi … 7 = dimanche)
+  const [repeter, setRepeter] = useState(false)
+  const [joursRepet, setJoursRepet] = useState<number[]>([])
+  const joursEffectifs = repeter ? (joursRepet.length ? joursRepet : [jourSemaineIso(date)]) : []
+
+  function choisirClient(c: Client | null) {
+    setClient(c)
+    // Un client régulier commande chaque semaine : répétition proposée d'office.
+    if (c?.type === "regulier" || c?.type === "point_de_vente") {
+      setRepeter(true)
+      setJoursRepet([])
+    } else {
+      setRepeter(false)
+      setJoursRepet([])
+    }
+  }
   const [quantites, setQuantites] = useState<Record<string, number>>({})
   const [notes, setNotes] = useState("")
   const [pdvId, setPdvId] = useState(pointDeVenteFixe?.id ?? pointsDeVente[0]?.id ?? "")
@@ -103,6 +122,8 @@ export function FormulaireCommande({ produits, clients, pointsDeVente, pointDeVe
     setQuantites({})
     setNotes("")
     setDate(ajouterJours(aujourdhui(), 1))
+    setRepeter(false)
+    setJoursRepet([])
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
@@ -116,6 +137,7 @@ export function FormulaireCommande({ produits, clients, pointsDeVente, pointDeVe
       p_lignes: lignes.map((l) => ({ produit_id: l.produit.id, quantite: l.quantite })),
       p_notes: notes.trim() || null,
       p_point_de_vente_id: pointDeVenteFixe?.id ?? pdvId,
+      p_jours_semaine: joursEffectifs.length ? joursEffectifs : null,
     }
     ajouterOperation({
       type: "commande",
@@ -131,7 +153,11 @@ export function FormulaireCommande({ produits, clients, pointsDeVente, pointDeVe
 
     const restante = lireFile().find((o) => o.id === payload.p_id)
     if (resultat.envoyees.includes(payload.p_id)) {
-      toast.success(`Commande de ${client.nom} envoyée au fornil`, { description: formatDate(date) })
+      toast.success(`Commande de ${client.nom} envoyée au fornil`, {
+        description: joursEffectifs.length
+          ? `Chaque semaine : ${libelleJoursRepet(joursEffectifs)} (à partir du ${formatDate(date)})`
+          : formatDate(date),
+      })
       reinitialiser()
     } else if (restante?.erreur) {
       toast.error("Commande refusée par le serveur", { description: restante.erreur })
@@ -178,10 +204,10 @@ export function FormulaireCommande({ produits, clients, pointsDeVente, pointDeVe
       <SelecteurClient
         clients={tousClients}
         selection={client}
-        surSelection={setClient}
+        surSelection={choisirClient}
         surNouveauClient={(c) => {
           setClientsLocaux((l) => [...l, c])
-          setClient(c)
+          choisirClient(c)
         }}
       />
 
@@ -218,6 +244,55 @@ export function FormulaireCommande({ produits, clients, pointsDeVente, pointDeVe
           className="h-12 w-full rounded-lg border bg-transparent px-3 text-base"
         />
         <p className="mt-1 text-sm text-muted-foreground first-letter:uppercase">{formatDate(date)}</p>
+
+        <div className="mt-3 rounded-lg border p-3">
+          <label className="flex min-h-11 cursor-pointer items-center justify-between gap-3">
+            <span className="flex items-center gap-2 font-medium">
+              <RepeatIcon className="size-4" /> Toutes les semaines
+            </span>
+            <Switch
+              checked={repeter}
+              onCheckedChange={(v) => {
+                setRepeter(v)
+                setJoursRepet([])
+              }}
+            />
+          </label>
+          {repeter && (
+            <>
+              <div className="mt-2 grid grid-cols-7 gap-1">
+                {[1, 2, 3, 4, 5, 6, 7].map((j) => {
+                  const coche = joursEffectifs.includes(j)
+                  return (
+                    <button
+                      key={j}
+                      type="button"
+                      aria-pressed={coche}
+                      aria-label={NOMS_JOURS_SEMAINE[j]}
+                      onClick={() =>
+                        setJoursRepet((liste) => {
+                          const base = liste.length ? liste : [jourSemaineIso(date)]
+                          const suivante = base.includes(j) ? base.filter((x) => x !== j) : [...base, j].sort()
+                          return suivante.length ? suivante : base
+                        })
+                      }
+                      className={cn(
+                        "min-h-11 rounded-lg border text-sm font-semibold uppercase",
+                        coche ? "border-primary bg-primary text-primary-foreground" : "hover:bg-muted",
+                      )}
+                    >
+                      {NOMS_JOURS_SEMAINE[j].slice(0, 2)}
+                    </button>
+                  )
+                })}
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Commande habituelle : chaque {libelleJoursRepet(joursEffectifs)}. Annulable pour une semaine ou pour
+                toujours dans « Mes commandes ».
+              </p>
+            </>
+          )}
+        </div>
       </section>
 
       {/* 4. Produits */}
@@ -332,6 +407,11 @@ export function FormulaireCommande({ produits, clients, pointsDeVente, pointDeVe
             ))}
           </ul>
           {notes.trim() && <p className="text-sm italic text-muted-foreground">« {notes.trim()} »</p>}
+          {joursEffectifs.length > 0 && (
+            <p className="flex items-center gap-2 rounded-lg bg-primary/5 px-3 py-2 text-sm font-medium">
+              <RepeatIcon className="size-4" /> Toutes les semaines : {libelleJoursRepet(joursEffectifs)}
+            </p>
+          )}
           <div className="flex items-baseline justify-between">
             <span className="text-sm text-muted-foreground">Total TTC estimé</span>
             <span className="text-xl font-bold tabular-nums">{formatPrix(total.ttc)}</span>
@@ -384,4 +464,8 @@ function ChampQuantite({
       className="h-12 w-14 rounded-lg bg-transparent text-center text-lg font-semibold tabular-nums outline-none focus:ring-2 focus:ring-ring"
     />
   )
+}
+
+export function libelleJoursRepet(jours: number[]): string {
+  return [...jours].sort().map((j) => NOMS_JOURS_SEMAINE[j]).join(", ")
 }
